@@ -1,0 +1,183 @@
+// MindTrack — Prisma schema
+// Внимание: окружение sandbox использует SQLite. Перенос на PostgreSQL/Neon:
+//   - String JSON-поля → @db.JsonB
+//   - provider = "postgresql"
+//   - остальная логика не меняется (шифрование уже прикладное).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Пользователь self-tracker'а. Единственная роль.
+model User {
+  id                  String   @id @default(cuid())
+  email               String   @unique
+  passwordHash        String
+  timezone            String   @default("UTC")
+  /// Отметка времени принятия согласия на обработку чувствительных данных о ментальном здоровье.
+  consentAcceptedAt   DateTime?
+  onboardingCompleted Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  conditionTags   UserConditionTag[]
+  testResponses   TestResponse[]
+  diaryEntries    DiaryEntry[]
+  medications     Medication[]
+  medicationLogs  MedicationLog[]
+  exportLogs      ExportLog[]
+}
+
+/// Справочник тем/состояний (НЕ диагноз). Тег для персонализации набора тестов/полей.
+model ConditionTag {
+  id          String   @id @default(cuid())
+  code        String   @unique // "depression", "anxiety", "bipolar", "bpd", "adhd"
+  name        String
+  description String?
+  /// Какие коды тестов рекомендовать при выборе этого тега (JSON-массив строк).
+  recommendedTestCodes String @default("[]")
+
+  users UserConditionTag[]
+}
+
+/// Связь user ↔ tag (many-to-many).
+model UserConditionTag {
+  userId          String
+  conditionTagId  String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conditionTag    ConditionTag  @relation(fields: [conditionTagId], references: [id], onDelete: Cascade)
+
+  @@id([userId, conditionTagId])
+}
+
+/// Справочник тестов (PHQ-9, GAD-7, MDQ, ASRS...). Generic: варианты ответов хранятся в TestQuestion.optionsJson.
+model TestDefinition {
+  id            String   @id @default(cuid())
+  code          String   @unique // "PHQ9", "GAD7", "MDQ", "ASRS"
+  name          String
+  description   String?
+  /// Рекомендуемая периодичность прохождения в днях (PHQ-9 — 14).
+  periodicityDays Int    @default(14)
+  category      String   @default("screening") // screening | mood | ...
+  version       Int      @default(1)
+  /// JSON: правило подсчёта (mode: sum|threshold, bands[], crisisQuestionIndexes[]).
+  scoringRuleJson String
+
+  questions  TestQuestion[]
+  responses  TestResponse[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Вопрос теста с порядком и вариантами ответов (JSON: [{value,label}]).
+model TestQuestion {
+  id               String         @id @default(cuid())
+  testDefinitionId String
+  order            Int
+  text             String
+  /// JSON-массив вариантов ответа: [{"value":0,"label":"..."}]
+  optionsJson      String
+  /// Является ли вопрос «открытым» (текстовый ответ) — нужно для криз-детекции.
+  isFreeText       Boolean        @default(false)
+
+  testDefinition TestDefinition @relation(fields: [testDefinitionId], references: [id], onDelete: Cascade)
+
+  @@index([testDefinitionId])
+}
+
+/// Прохождение теста пользователем.
+model TestResponse {
+  id                 String   @id @default(cuid())
+  userId             String
+  testDefinitionId   String
+  /// Зашифрованный AES-256-GCM JSON ответов (включая iv+tag).
+  answersCipher      String
+  totalScore         Int
+  interpretedSeverity String  // "none" | "mild" | "moderate" | "moderately_severe" | "severe" | "positive" | "negative"
+  interpretedLabel   String   // человекочитаемая метка
+  completedAt        DateTime @default(now())
+  createdAt          DateTime @default(now())
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  testDefinition TestDefinition @relation(fields: [testDefinitionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, testDefinitionId])
+  @@index([userId, completedAt])
+}
+
+/// Гибкая запись дневника. notes — зашифрованы. customFieldsJson — задел под расширение без миграций.
+model DiaryEntry {
+  id               String   @id @default(cuid())
+  userId           String
+  date             DateTime // календарный день записи
+  mood             Int      // 0..10
+  sleepHours       Float?
+  energyLevel      Int?     // 0..10
+  /// Зашифрованный AES-256-GCM текст заметки.
+  notesCipher      String   @default("")
+  /// JSON произвольных полей (будущие расширения без миграций).
+  customFieldsJson String   @default("{}")
+  crisisDetected   Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+  @@unique([userId, date])
+}
+
+/// (MVP+1) Лекарство пользователя.
+model Medication {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  dosage    String?
+  schedule  String?  // "1 tab morning"
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs  MedicationLog[]
+
+  @@index([userId])
+}
+
+/// Лог приёма лекарства.
+model MedicationLog {
+  id           String   @id @default(cuid())
+  medicationId String
+  userId       String
+  takenAt      DateTime @default(now())
+  note         String?
+
+  medication Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, takenAt])
+}
+
+/// История сформированных отчётов + временные read-only ссылки.
+model ExportLog {
+  id              String   @id @default(cuid())
+  userId          String
+  dateRangeFrom   DateTime
+  dateRangeTo     DateTime
+  /// JSON массив включённых разделов: ["tests","diary","charts"].
+  includedSections String
+  createdAt       DateTime @default(now())
+  /// TTL временной ссылки. null = без публичной ссылки (только PDF-скачивание).
+  shareToken      String?  @unique
+  expiresAt       DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
