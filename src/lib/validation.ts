@@ -1,11 +1,29 @@
 import { z } from "zod";
 
 // ---------- Аутентификация ----------
-export const registerSchema = z.object({
-  email: z.string().email("Некорректный email"),
-  password: z.string().min(8, "Пароль не короче 8 символов").max(128),
-  timezone: z.string().max(64).optional(),
-});
+const TRIVIAL_PASSWORDS = new Set([
+  "password", "password1", "12345678", "123456789", "1234567890",
+  "qwerty123", "qwertyuiop", "iloveyou", "1111111111", "0000000000",
+  "letmein123", "admin1234", "welcome123", "mindtrack1",
+]);
+
+/** Политика пароля: 10–128 символов, не тривиальный. */
+export const passwordSchema = z
+  .string()
+  .min(10, "Пароль не короче 10 символов")
+  .max(128, "Пароль не длиннее 128 символов")
+  .refine((v) => !TRIVIAL_PASSWORDS.has(v.toLowerCase()), "Слишком простой пароль");
+
+export const registerSchema = z
+  .object({
+    email: z.string().email("Некорректный email"),
+    password: passwordSchema,
+    timezone: z.string().max(64).optional(),
+  })
+  .refine((d) => d.password.toLowerCase() !== d.email.toLowerCase(), {
+    message: "Пароль не должен совпадать с email",
+    path: ["password"],
+  });
 export type RegisterInput = z.infer<typeof registerSchema>;
 
 export const loginSchema = z.object({
@@ -13,6 +31,23 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Введите пароль"),
 });
 export type LoginInput = z.infer<typeof loginSchema>;
+
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Некорректный email"),
+});
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(32, "Некорректный токен").max(256),
+  password: passwordSchema,
+});
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Введите текущий пароль"),
+  newPassword: passwordSchema,
+});
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
 
 // ---------- Онбординг ----------
 export const onboardingSchema = z.object({

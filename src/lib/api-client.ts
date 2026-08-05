@@ -140,6 +140,24 @@ export const api = {
       }).then((r) => handle<{ user: AppUser }>(r)),
     logout: () =>
       fetch("/api/auth/logout", { method: "POST" }).then((r) => handle<{ ok: true }>(r)),
+    forgotPassword: (email: string) =>
+      fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      }).then((r) => handle<{ ok: true; message: string; resetUrl?: string }>(r)),
+    resetPassword: (token: string, password: string) =>
+      fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, password }),
+      }).then((r) => handle<{ ok: true }>(r)),
+    changePassword: (currentPassword: string, newPassword: string) =>
+      fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      }).then((r) => handle<{ ok: true }>(r)),
   },
   consent: {
     accept: () =>
@@ -234,11 +252,11 @@ export const api = {
       }).then((r) => handle<{ shareUrl: string; shareToken: string; expiresAt: string }>(r)),
   },
   account: {
-    delete: () =>
+    delete: (password: string) =>
       fetch("/api/account/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ confirm: "DELETE" }),
+        body: JSON.stringify({ confirm: "DELETE", password }),
       }).then((r) => handle<{ ok: true }>(r)),
     exportData: () => fetch("/api/account/export-data").then((r) => r.blob()),
   },

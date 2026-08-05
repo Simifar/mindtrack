@@ -30,6 +30,39 @@ model User {
   medications     Medication[]
   medicationLogs  MedicationLog[]
   exportLogs      ExportLog[]
+  sessions        Session[]
+  passwordResetTokens PasswordResetToken[]
+}
+
+/// Серверная сессия. JWT в cookie содержит sid — id этой записи.
+/// Позволяет отзывать сессии (logout, смена/сброс пароля, удаление аккаунта).
+model Session {
+  id        String    @id @default(cuid())
+  userId    String
+  expiresAt DateTime
+  /// null = активна; выставляется при logout/отзыве.
+  revokedAt DateTime?
+  userAgent String?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Одноразовый токен сброса пароля. Храним только sha256-хэш токена.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  /// null = не использован; выставляется при успешном сбросе.
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 /// Справочник тем/состояний (НЕ диагноз). Тег для персонализации набора тестов/полей.

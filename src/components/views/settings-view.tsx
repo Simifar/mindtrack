@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +18,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Download, Trash2, Loader2, ShieldAlert, Database } from "lucide-react";
+import { Download, Trash2, Loader2, ShieldAlert, Database, KeyRound } from "lucide-react";
 
 export function SettingsView() {
   const user = useAppStore((s) => s.user);
@@ -27,6 +28,37 @@ export function SettingsView() {
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmText, setConfirmText] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+
+  // Смена пароля
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+
+  async function changePassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (newPassword !== newPasswordConfirm) {
+      toast({ title: "Ошибка", description: "Новые пароли не совпадают", variant: "destructive" });
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await api.auth.changePassword(currentPassword, newPassword);
+      toast({ title: "Пароль изменён", description: "Остальные сессии завершены" });
+      setCurrentPassword("");
+      setNewPassword("");
+      setNewPasswordConfirm("");
+    } catch (err) {
+      toast({
+        title: "Ошибка",
+        description: err instanceof Error ? err.message : "Не удалось",
+        variant: "destructive",
+      });
+    } finally {
+      setChangingPassword(false);
+    }
+  }
 
   async function exportData() {
     setExporting(true);
@@ -55,7 +87,7 @@ export function SettingsView() {
   async function deleteAccount() {
     setDeleting(true);
     try {
-      await api.account.delete();
+      await api.account.delete(deletePassword);
       toast({ title: "Аккаунт удалён", description: "Все данные стёрты" });
       setUser(null);
     } catch (err) {
@@ -106,6 +138,61 @@ export function SettingsView() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
+            <KeyRound className="h-4 w-4" />
+            Смена пароля
+          </CardTitle>
+          <CardDescription>
+            После смены пароля все прочие сессии будут завершены
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={changePassword} className="max-w-sm space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="current-password">Текущий пароль</Label>
+              <Input
+                id="current-password"
+                type="password"
+                required
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-password">Новый пароль (мин. 10 символов)</Label>
+              <Input
+                id="new-password"
+                type="password"
+                required
+                minLength={10}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-password-confirm">Повторите новый пароль</Label>
+              <Input
+                id="new-password-confirm"
+                type="password"
+                required
+                minLength={10}
+                value={newPasswordConfirm}
+                onChange={(e) => setNewPasswordConfirm(e.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
+            <Button type="submit" variant="outline" disabled={changingPassword}>
+              {changingPassword && <Loader2 className="h-4 w-4 animate-spin" />}
+              Сменить пароль
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
             <Download className="h-4 w-4" />
             Экспорт всех данных
           </CardTitle>
@@ -150,21 +237,40 @@ export function SettingsView() {
                   расшифрованные заметки), история экспорта. Это действие нельзя отменить.
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <div className="space-y-1.5">
-                <p className="text-sm">
-                  Для подтверждения введите <span className="font-mono font-semibold">УДАЛИТЬ</span>:
-                </p>
-                <Input
-                  value={confirmText}
-                  onChange={(e) => setConfirmText(e.target.value)}
-                  placeholder="УДАЛИТЬ"
-                />
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <p className="text-sm">
+                    Для подтверждения введите <span className="font-mono font-semibold">УДАЛИТЬ</span>:
+                  </p>
+                  <Input
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    placeholder="УДАЛИТЬ"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-sm">И ваш текущий пароль:</p>
+                  <Input
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    placeholder="Пароль"
+                    autoComplete="current-password"
+                  />
+                </div>
               </div>
               <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setConfirmText("")}>Отмена</AlertDialogCancel>
+                <AlertDialogCancel
+                  onClick={() => {
+                    setConfirmText("");
+                    setDeletePassword("");
+                  }}
+                >
+                  Отмена
+                </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={deleteAccount}
-                  disabled={confirmText !== "УДАЛИТЬ" || deleting}
+                  disabled={confirmText !== "УДАЛИТЬ" || !deletePassword || deleting}
                   className="bg-destructive text-white hover:bg-destructive/90"
                 >
                   {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -181,10 +287,11 @@ export function SettingsView() {
           <CardTitle className="text-base">Безопасность данных</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>✓ Пароли хранятся в виде bcrypt-хэша (10 раундов).</p>
+          <p>✓ Пароли хранятся в виде bcrypt-хэша (12 раундов).</p>
           <p>✓ Заметки дневника и ответы тестов шифруются AES-256-GCM на уровне приложения.</p>
           <p>✓ Передача данных — по TLS.</p>
-          <p>✓ Сессия — JWT в http-only cookie (30 дней).</p>
+          <p>✓ Сессия — JWT в http-only cookie (30 дней), отзывается на сервере при выходе и смене пароля.</p>
+          <p>✓ Ограничение числа попыток входа и сброса пароля (rate limiting).</p>
           <p>✓ Каскадное удаление: при удалении аккаунта стираются все связанные записи.</p>
         </CardContent>
       </Card>

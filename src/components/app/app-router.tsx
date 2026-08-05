@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useAppStore } from "@/store/app-store";
 import { api } from "@/lib/api-client";
 import { AppShell } from "@/components/app/app-shell";
@@ -22,6 +22,10 @@ export function AppRouter() {
   const view = useAppStore((s) => s.view);
   const shareToken = useAppStore((s) => s.shareToken);
   const setShareToken = useAppStore((s) => s.setShareToken);
+  const [resetToken] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return new URLSearchParams(window.location.search).get("resetToken");
+  });
 
   // Определяем share-токен из URL (публичный отчёт — без авторизации).
   useEffect(() => {
@@ -56,7 +60,7 @@ export function AppRouter() {
 
   // Не авторизован.
   if (user === null) {
-    return <AuthView onAuthed={setUser} />;
+    return <AuthView onAuthed={setUser} resetToken={resetToken} />;
   }
 
   // Согласие не принято.
