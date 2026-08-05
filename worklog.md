@@ -67,3 +67,26 @@ Work Log:
 Stage Summary:
 - MVP полностью рабочий и проверенный в браузере. Lint чист.
 - Кризис-детекция и PDF-генерация проверены через curl (PHQ-9 q9>0→crisisDetected, PDF валиден).
+
+---
+Task ID: local-pg-setup
+Agent: main
+Task: Перевести локальную разработку на PostgreSQL в Docker и сгенерировать начальную миграцию
+
+Work Log:
+- Проанализирован стек: Next.js 16 + Bun + Prisma + SQLite. Схема была спроектирована с заделом под PostgreSQL, но использовала String для JSON-полей из-за SQLite.
+- Уточнён правильный подход для Prisma 6 + PostgreSQL: JSON-поля должны иметь тип Json (маппится на jsonb), а не String @db.JsonB.
+- Обновлена prisma/schema.prisma: provider = "postgresql", JSON-поля переведены в Json с @default.
+- Обновлены все чтения/записи JSON-полей в коде: убран JSON.parse, используются приведения типов Prisma.JsonValue / InputJsonValue.
+- Обновлен prisma/seed.ts: справочники и вопросы теперь передают массивы/объекты напрямую, без JSON.stringify.
+- Добавлен docker-compose.yml с PostgreSQL 16-alpine, persistent volume и healthcheck.
+- Добавлен .env.example с локальным DATABASE_URL и переменными для Docker Compose.
+- Обновлен .gitignore: .env игнорируется, .env.example — отслеживается.
+- Обновлены package.json scripts: db:up / db:down / db:logs / db:studio.
+- Сгенерирована и применена начальная миграция prisma/migrations/20260805145330_init.
+- Запущен Docker-контейнер mindtrack-postgres, выполнен seed. Проверены данные в БД: ConditionTag (7), TestDefinition (4), TestQuestion (37), JSONB-поля корректны.
+- bun run lint пройден без ошибок. tsc --noEmit показывает только прежние ошибки в examples/websocket и src/lib/pdf-report.tsx (вне зоны задачи).
+
+Stage Summary:
+- Локальная разработка теперь работает на PostgreSQL через Docker. Проект готов к переносу на российский VPS без изменения кода.
+- Для старта достаточно: скопировать .env.example → .env, bun run db:up, bun run db:migrate, bun run db:seed, bun dev.

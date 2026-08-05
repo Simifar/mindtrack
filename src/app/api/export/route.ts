@@ -5,6 +5,7 @@ import { exportRequestSchema, apiError } from "@/lib/validation";
 import { buildReportData, buildReportDocument } from "@/lib/pdf-report";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { randomBytes } from "crypto";
+import { Prisma } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,7 +86,7 @@ export async function POST(req: Request) {
       userId: user.id,
       dateRangeFrom: from,
       dateRangeTo: to,
-      includedSections: JSON.stringify(sections),
+      includedSections: sections as Prisma.InputJsonValue,
       shareToken,
       expiresAt,
     },

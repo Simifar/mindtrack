@@ -32,7 +32,7 @@ export async function GET(
     return NextResponse.json({ error: "Срок действия ссылки истёк" }, { status: 403 });
   }
 
-  const sections = JSON.parse(log.includedSections) as string[];
+  const sections = log.includedSections as string[];
 
   const [tests, diary] = await Promise.all([
     db.testResponse.findMany({

@@ -25,7 +25,7 @@ export async function GET(
     order: q.order,
     text: q.text,
     isFreeText: q.isFreeText,
-    options: q.isFreeText ? [] : (JSON.parse(q.optionsJson) as { value: number; label: string }[]),
+    options: q.isFreeText ? [] : (q.optionsJson as { value: number; label: string }[]),
   }));
 
   // Последние прохождения для тренда.

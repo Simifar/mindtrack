@@ -43,7 +43,7 @@ export async function GET(req: Request) {
     sleepHours: e.sleepHours,
     energyLevel: e.energyLevel,
     notes: e.notesCipher ? decryptSafe(e.notesCipher) : "",
-    customFields: e.customFieldsJson ? JSON.parse(e.customFieldsJson) : {},
+    customFields: e.customFieldsJson ? (e.customFieldsJson as Record<string, unknown>) : {},
     crisisDetected: e.crisisDetected,
   }));
 

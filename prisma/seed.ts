@@ -8,22 +8,22 @@
  * Дисклеймер: шкалы и пороги взяты из стандартных публичных версий опросников.
  * Это НЕ диагноз — только инструмент самонаблюдения.
  */
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 
 const db = new PrismaClient();
 
-const YESNO = JSON.stringify([
+const YESNO = [
   { value: 0, label: "Нет" },
   { value: 1, label: "Да" },
-]);
+] as Prisma.InputJsonValue;
 
 // ---------- PHQ-9 ----------
-const phq9Options = JSON.stringify([
+const phq9Options = [
   { value: 0, label: "Совсем не беспокоило" },
   { value: 1, label: "Несколько дней" },
   { value: 2, label: "Более половины дней" },
   { value: 3, label: "Почти каждый день" },
-]);
+] as Prisma.InputJsonValue;
 const phq9Questions = [
   "Снижение интереса или удовольствия от привычных занятий",
   "Подавленность, депрессивность, безнадёжность",
@@ -90,12 +90,12 @@ const mdqQ1Questions = [
   "…вели себя так, что это казалось необычным для Вас?",
   "…поступали так, что это вызывало проблемы у семьи/на работе?",
 ];
-const mdqQ2Options = JSON.stringify([
+const mdqQ2Options = [
   { value: 0, label: "Проблем не было" },
   { value: 1, label: "Незначительные проблемы" },
   { value: 2, label: "Умеренные проблемы" },
   { value: 3, label: "Серьёзные проблемы" },
-]);
+] as Prisma.InputJsonValue;
 const mdqQuestions = [
   ...mdqQ1Questions,
   "Если Вы отмечали что-то из перечисленного: насколько это было проблемой для Вас или окружающих?",
@@ -121,13 +121,13 @@ const mdqScoring = {
 };
 
 // ---------- ASRS (Adult ADHD Self-Report Scale, 6-item) ----------
-const asrsOptions = JSON.stringify([
+const asrsOptions = [
   { value: 0, label: "Никогда" },
   { value: 1, label: "Редко" },
   { value: 2, label: "Иногда" },
   { value: 3, label: "Часто" },
   { value: 4, label: "Очень часто" },
-]);
+] as Prisma.InputJsonValue;
 const asrsQuestions = [
   "Допускаете невнимательность или ошибки из-за недостатка концентрации",
   "Трудно удерживать внимание при длинных задачах",
@@ -154,43 +154,43 @@ const conditionTags = [
     code: "depression",
     name: "Депрессивные состояния",
     description: "Периоды подавленности, потери интереса, упадка сил.",
-    recommendedTestCodes: JSON.stringify(["PHQ9"]),
+    recommendedTestCodes: ["PHQ9"] as Prisma.InputJsonValue,
   },
   {
     code: "anxiety",
     name: "Тревожность",
     description: "Повышенная тревога, напряжение, беспокойство.",
-    recommendedTestCodes: JSON.stringify(["GAD7"]),
+    recommendedTestCodes: ["GAD7"] as Prisma.InputJsonValue,
   },
   {
     code: "bipolar",
     name: "Колебания настроения (БАР)",
     description: "Эпизоды подъёма и спада настроения, импульсивность.",
-    recommendedTestCodes: JSON.stringify(["MDQ", "PHQ9"]),
+    recommendedTestCodes: ["MDQ", "PHQ9"] as Prisma.InputJsonValue,
   },
   {
     code: "adhd",
     name: "Внимание и концентрация (СДВГ)",
     description: "Трудности с фокусом, организацией, завершением задач.",
-    recommendedTestCodes: JSON.stringify(["ASRS"]),
+    recommendedTestCodes: ["ASRS"] as Prisma.InputJsonValue,
   },
   {
     code: "bpd",
     name: "Эмоциональная нестабильность (ПРЛ)",
     description: "Выраженные перепады настроения, чувствительность в отношениях.",
-    recommendedTestCodes: JSON.stringify(["PHQ9", "GAD7"]),
+    recommendedTestCodes: ["PHQ9", "GAD7"] as Prisma.InputJsonValue,
   },
   {
     code: "sleep",
     name: "Сон и восстановление",
     description: "Качество сна, бодрость в течение дня.",
-    recommendedTestCodes: JSON.stringify(["PHQ9", "GAD7"]),
+    recommendedTestCodes: ["PHQ9", "GAD7"] as Prisma.InputJsonValue,
   },
   {
     code: "general",
     name: "Общее самочувствие",
     description: "Базовый self-tracking без конкретной темы.",
-    recommendedTestCodes: JSON.stringify(["PHQ9", "GAD7"]),
+    recommendedTestCodes: ["PHQ9", "GAD7"] as Prisma.InputJsonValue,
   },
 ];
 
@@ -200,7 +200,7 @@ async function upsertTest(
   description: string,
   periodicityDays: number,
   scoringRule: object,
-  questions: { text: string; options: string; isFreeText?: boolean }[]
+  questions: { text: string; options: Prisma.InputJsonValue; isFreeText?: boolean }[]
 ) {
   const existing = await db.testDefinition.findUnique({ where: { code } });
   const data = {
@@ -210,7 +210,7 @@ async function upsertTest(
     periodicityDays,
     category: "screening",
     version: existing ? existing.version + 1 : 1,
-    scoringRuleJson: JSON.stringify(scoringRule),
+    scoringRuleJson: scoringRule as Prisma.InputJsonValue,
   };
   const def = existing
     ? await db.testDefinition.update({ where: { code }, data })

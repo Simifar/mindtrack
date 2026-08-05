@@ -21,6 +21,8 @@
  * }
  */
 
+import { Prisma } from "@prisma/client";
+
 export interface ScoringBand {
   max: number;
   severity: string;
@@ -69,7 +71,7 @@ export interface TestQuestionData {
   id: string;
   order: number;
   text: string;
-  optionsJson: string; // JSON: QuestionOption[]
+  optionsJson: Prisma.JsonValue; // JSON: QuestionOption[]
   isFreeText: boolean;
 }
 
@@ -80,12 +82,18 @@ export interface ScoreResult {
   crisisDetected: boolean;
 }
 
-function parseRule(ruleJson: string): ScoringRule {
-  try {
-    return JSON.parse(ruleJson) as ScoringRule;
-  } catch {
-    return { mode: "sum", bands: [] };
+function parseRule(ruleJson: Prisma.JsonValue): ScoringRule {
+  if (ruleJson && typeof ruleJson === "object") {
+    return ruleJson as unknown as ScoringRule;
   }
+  if (typeof ruleJson === "string") {
+    try {
+      return JSON.parse(ruleJson) as ScoringRule;
+    } catch {
+      return { mode: "sum", bands: [] };
+    }
+  }
+  return { mode: "sum", bands: [] };
 }
 
 function num(v: number | string): number {
@@ -101,7 +109,7 @@ function num(v: number | string): number {
  * @param questions вопросы теста (для порядка и crisis-индексов)
  */
 export function scoreTest(
-  ruleJson: string,
+  ruleJson: Prisma.JsonValue,
   answers: AnswerValue[],
   questions: TestQuestionData[]
 ): ScoreResult {

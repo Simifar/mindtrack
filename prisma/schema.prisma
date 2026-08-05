@@ -1,15 +1,14 @@
 // MindTrack — Prisma schema
-// Внимание: окружение sandbox использует SQLite. Перенос на PostgreSQL/Neon:
-//   - String JSON-поля → @db.JsonB
-//   - provider = "postgresql"
-//   - остальная логика не меняется (шифрование уже прикладное).
+// Локальная разработка и продакшен используют PostgreSQL.
+// Исторически: sandbox использовала SQLite; JSON-поля мигрировали в @db.JsonB.
+// Остальная логика не меняется (шифрование уже прикладное AES-256-GCM).
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -40,7 +39,7 @@ model ConditionTag {
   name        String
   description String?
   /// Какие коды тестов рекомендовать при выборе этого тега (JSON-массив строк).
-  recommendedTestCodes String @default("[]")
+  recommendedTestCodes Json @default("[]")
 
   users UserConditionTag[]
 }
@@ -66,7 +65,7 @@ model TestDefinition {
   category      String   @default("screening") // screening | mood | ...
   version       Int      @default(1)
   /// JSON: правило подсчёта (mode: sum|threshold, bands[], crisisQuestionIndexes[]).
-  scoringRuleJson String
+  scoringRuleJson Json
 
   questions  TestQuestion[]
   responses  TestResponse[]
@@ -82,7 +81,7 @@ model TestQuestion {
   order            Int
   text             String
   /// JSON-массив вариантов ответа: [{"value":0,"label":"..."}]
-  optionsJson      String
+  optionsJson      Json
   /// Является ли вопрос «открытым» (текстовый ответ) — нужно для криз-детекции.
   isFreeText       Boolean        @default(false)
 
@@ -122,7 +121,7 @@ model DiaryEntry {
   /// Зашифрованный AES-256-GCM текст заметки.
   notesCipher      String   @default("")
   /// JSON произвольных полей (будущие расширения без миграций).
-  customFieldsJson String   @default("{}")
+  customFieldsJson Json   @default("{}")
   crisisDetected   Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -171,7 +170,7 @@ model ExportLog {
   dateRangeFrom   DateTime
   dateRangeTo     DateTime
   /// JSON массив включённых разделов: ["tests","diary","charts"].
-  includedSections String
+  includedSections Json
   createdAt       DateTime @default(now())
   /// TTL временной ссылки. null = без публичной ссылки (только PDF-скачивание).
   shareToken      String?  @unique

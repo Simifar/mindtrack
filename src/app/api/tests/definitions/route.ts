@@ -33,7 +33,7 @@ export async function GET() {
     });
     for (const t of tags) {
       try {
-        const codes = JSON.parse(t.conditionTag.recommendedTestCodes) as string[];
+        const codes = t.conditionTag.recommendedTestCodes as string[];
         codes.forEach((c) => recommendedCodes.add(c));
       } catch {
         /* ignore */

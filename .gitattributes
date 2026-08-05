@@ -1,0 +1,12 @@
+* text=auto eol=lf
+
+*.lock binary
+*.svg text
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary

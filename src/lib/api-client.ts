@@ -16,7 +16,7 @@ export type ConditionTagDTO = {
   code: string;
   name: string;
   description: string | null;
-  recommendedTestCodes: string;
+  recommendedTestCodes: string[];
 };
 
 export type TestDefinitionDTO = {
