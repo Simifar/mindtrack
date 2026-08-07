@@ -32,7 +32,7 @@ export function CrisisBanner() {
             <a
               key={line.phone}
               href={line.href}
-              className="flex items-center justify-between rounded-lg border bg-white p-3 transition hover:bg-accent"
+              className="flex items-center justify-between rounded-lg border bg-card p-3 transition hover:bg-accent"
             >
               <div>
                 <div className="font-medium">{line.name}</div>

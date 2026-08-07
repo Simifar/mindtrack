@@ -93,10 +93,13 @@ export async function POST(req: Request) {
   });
 
   if (generateShareLink) {
+    if (!expiresAt) {
+      return apiError("Не удалось создать ссылку", 500);
+    }
     return NextResponse.json({
       shareUrl: `/?share=${shareToken}`,
       shareToken,
-      expiresAt: expiresAt!.toISOString(),
+      expiresAt: expiresAt.toISOString(),
     });
   }
 

@@ -18,12 +18,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Download, Trash2, Loader2, ShieldAlert, Database, KeyRound } from "lucide-react";
+import { ThemeToggle } from "@/components/app/theme-toggle";
+import { Download, Trash2, Loader2, ShieldAlert, Database, KeyRound, Monitor } from "lucide-react";
 
 export function SettingsView() {
   const user = useAppStore((s) => s.user);
   const setUser = useAppStore((s) => s.setUser);
-  const setView = useAppStore((s) => s.setView);
   const { toast } = useToast();
   const [exporting, setExporting] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -132,6 +132,19 @@ export function SettingsView() {
                 : "—"}
             </span>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Monitor className="h-4 w-4" />
+            Внешний вид
+          </CardTitle>
+          <CardDescription>Светлая или тёмная тема оформления</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ThemeToggle />
         </CardContent>
       </Card>
 

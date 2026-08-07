@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ShieldCheck, Loader2 } from "lucide-react";
 
-export function ConsentView({ user, onDone }: { user: AppUser; onDone: (u: AppUser) => void }) {
+export function ConsentView({ user: _user, onDone }: { user: AppUser; onDone: (u: AppUser) => void }) {
   const [agree, setAgree] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();

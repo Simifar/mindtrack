@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, TrendingUp, Moon, Activity, ClipboardCheck, AlertCircle, Plus } from "lucide-react";
+import { TrendingUp, Moon, Activity, ClipboardCheck, AlertCircle, Plus } from "lucide-react";
 import {
   ResponsiveContainer,
   AreaChart,

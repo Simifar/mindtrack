@@ -6,8 +6,19 @@ import {
   Rect,
   Line,
   StyleSheet,
+  Font,
 } from "@react-pdf/renderer";
 import { decryptSafe } from "./crypto";
+import path from "node:path";
+
+Font.register({
+  family: "Roboto",
+  fonts: [
+    { src: path.join(process.cwd(), "public/fonts/Roboto-Regular.ttf"), fontWeight: 400 },
+    { src: path.join(process.cwd(), "public/fonts/Roboto-Medium.ttf"), fontWeight: 500 },
+    { src: path.join(process.cwd(), "public/fonts/Roboto-Bold.ttf"), fontWeight: 700 },
+  ],
+});
 
 // ---------- Типы данных отчёта ----------
 export interface ReportTestData {
@@ -46,12 +57,12 @@ export interface ReportData {
 
 // ---------- Стили ----------
 const styles = StyleSheet.create({
-  page: { padding: 36, fontSize: 10, fontFamily: "Helvetica", color: "#1f2937" },
-  title: { fontSize: 18, fontFamily: "Helvetica-Bold", marginBottom: 2 },
+  page: { padding: 36, fontSize: 10, fontFamily: "Roboto", color: "#1f2937" },
+  title: { fontSize: 18, fontWeight: "bold", marginBottom: 2 },
   subtitle: { fontSize: 9, color: "#6b7280", marginBottom: 12 },
   sectionTitle: {
     fontSize: 12,
-    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
     marginTop: 14,
     marginBottom: 6,
     paddingBottom: 3,
@@ -86,7 +97,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     padding: 8,
   },
-  statValue: { fontSize: 16, fontFamily: "Helvetica-Bold" },
+  statValue: { fontSize: 16, fontFamily: "Roboto", fontWeight: "bold" },
   statLabel: { fontSize: 8, color: "#6b7280" },
   footer: {
     position: "absolute",
@@ -132,13 +143,13 @@ function BarChart({
 
   return (
     <View style={{ marginTop: 6 }}>
-      <Text style={{ fontSize: 9, fontFamily: "Helvetica-Bold", marginBottom: 2 }}>
+      <Text style={{ fontSize: 9, fontFamily: "Roboto", fontWeight: "bold", marginBottom: 2 }}>
         {label} {unit ? `(${unit})` : ""}
       </Text>
       <View style={{ position: "relative", height: chartH + 14, width: chartW }}>
         {/* оси */}
-        <Line x1={0} y1={chartH} x2={chartW} y2={chartH} strokeColor="#d1d5db" strokeWidth={0.5} />
-        <Line x1={0} y1={0} x2={0} y2={chartH} strokeColor="#d1d5db" strokeWidth={0.5} />
+        <Line x1={0} y1={chartH} x2={chartW} y2={chartH} style={{ stroke: "#d1d5db", strokeWidth: 0.5 }} />
+        <Line x1={0} y1={0} x2={0} y2={chartH} style={{ stroke: "#d1d5db", strokeWidth: 0.5 }} />
         {/* бары */}
         {data.map((d, i) => {
           const v = d[field];

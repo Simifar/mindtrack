@@ -24,8 +24,8 @@ export async function GET() {
   });
 
   // Рекомендованные коды тестов из тегов пользователя.
-  let recommendedCodes = new Set<string>();
-  let lastResponses: Record<string, { completedAt: string; totalScore: number; severity: string; label: string } | undefined> = {};
+  const recommendedCodes = new Set<string>();
+  const lastResponses: Record<string, { completedAt: string; totalScore: number; severity: string; label: string } | undefined> = {};
   if (user) {
     const tags = await db.userConditionTag.findMany({
       where: { userId: user.id },

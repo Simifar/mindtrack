@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
 import { env } from "./env";
+import { UnauthorizedError } from "./errors";
 
 const SESSION_COOKIE = "mt_session";
 const SESSION_TTL_DAYS = 30;
@@ -128,9 +129,4 @@ export async function requireUser() {
   return { ...user, sessionId: session.sid };
 }
 
-export class UnauthorizedError extends Error {
-  status = 401;
-  constructor() {
-    super("Не авторизован");
-  }
-}
+export { UnauthorizedError } from "./errors";

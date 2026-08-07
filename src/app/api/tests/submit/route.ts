@@ -34,6 +34,50 @@ export async function POST(req: Request) {
   });
   if (!def) return apiError("Тест не найден", 404);
 
+  // Валидация ответов по вопросам теста.
+  const answeredIds = new Set<string>();
+  const allowedQuestionIds = new Set(def.questions.map((q) => q.id));
+
+  for (const a of answers) {
+    if (!allowedQuestionIds.has(a.questionId)) {
+      return apiError("Ответ на неизвестный вопрос", 400);
+    }
+    if (answeredIds.has(a.questionId)) {
+      return apiError("Дублирующийся ответ на вопрос", 400);
+    }
+    answeredIds.add(a.questionId);
+  }
+
+  const missingQuestions = def.questions.filter((q) => !q.isFreeText && !answeredIds.has(q.id));
+  if (missingQuestions.length > 0) {
+    return apiError(
+      "Не на все обязательные вопросы даны ответы",
+      400,
+      missingQuestions.map((q) => q.text)
+    );
+  }
+
+  for (const a of answers) {
+    const question = def.questions.find((q) => q.id === a.questionId);
+    if (!question) continue;
+    if (question.isFreeText) {
+      if (typeof a.value !== "string") {
+        return apiError("Открытый ответ должен быть текстом", 400);
+      }
+      if (a.value.length > 2000) {
+        return apiError("Открытый ответ слишком длинный (максимум 2000 символов)", 400);
+      }
+      continue;
+    }
+    if (typeof a.value !== "number") {
+      return apiError("Ответ должен быть числом", 400);
+    }
+    const options = question.optionsJson as { value: number; label: string }[];
+    if (!options.some((o) => o.value === a.value)) {
+      return apiError("Недопустимое значение ответа", 400);
+    }
+  }
+
   // Серверный подсчёт по scoringRuleJson (клиент НЕ получает правило).
   const result = scoreTest(
     def.scoringRuleJson,

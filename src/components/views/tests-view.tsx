@@ -2,11 +2,11 @@
 import { useEffect, useState } from "react";
 import { api, type TestDefinitionDTO } from "@/lib/api-client";
 import { useAppStore } from "@/store/app-store";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Play, Star, Clock, Loader2 } from "lucide-react";
+import { Play, Star, Clock } from "lucide-react";
 import { severityColor } from "@/lib/test-scoring";
 
 export function TestsView() {

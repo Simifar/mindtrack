@@ -57,40 +57,58 @@ export const onboardingSchema = z.object({
 export type OnboardingInput = z.infer<typeof onboardingSchema>;
 
 // ---------- Тесты ----------
+const answerSchema = z.object({
+  questionId: z.string().min(1, "Отсутствует идентификатор вопроса"),
+  value: z.union([z.number().int().min(0, "Значение ответа не может быть отрицательным"), z.string()]),
+});
+
 export const submitTestSchema = z.object({
-  testDefinitionId: z.string().min(1),
+  testDefinitionId: z.string().min(1, "Отсутствует идентификатор теста"),
   /** Массив ответов: { questionId, value } где value — число или строка (для freeText). */
-  answers: z
-    .array(
-      z.object({
-        questionId: z.string(),
-        value: z.union([z.number(), z.string()]),
-      })
-    )
-    .min(1, "Нужен хотя бы один ответ"),
+  answers: z.array(answerSchema).min(1, "Нужен хотя бы один ответ"),
 });
 export type SubmitTestInput = z.infer<typeof submitTestSchema>;
 
 // ---------- Дневник ----------
-export const diaryEntrySchema = z.object({
-  date: z.string().min(1), // ISO date string (YYYY-MM-DD)
-  mood: z.number().int().min(0).max(10),
-  sleepHours: z.number().min(0).max(24).nullable().optional(),
-  energyLevel: z.number().int().min(0).max(10).nullable().optional(),
-  notes: z.string().max(5000).optional().default(""),
-});
+export const diaryEntrySchema = z
+  .object({
+    date: z.string().date("Некорректная дата. Ожидается YYYY-MM-DD"),
+    mood: z.number().int().min(0).max(10),
+    sleepHours: z.number().min(0).max(24).nullable().optional(),
+    energyLevel: z.number().int().min(0).max(10).nullable().optional(),
+    notes: z.string().max(5000).optional().default(""),
+  })
+  .refine(
+    (d) => {
+      const today = new Date().toISOString().slice(0, 10);
+      return d.date <= today;
+    },
+    { message: "Дата не может быть в будущем", path: ["date"] }
+  );
 export type DiaryEntryInput = z.infer<typeof diaryEntrySchema>;
 
 // ---------- Экспорт ----------
-export const exportRequestSchema = z.object({
-  dateFrom: z.string().min(1),
-  dateTo: z.string().min(1),
-  sections: z
-    .array(z.enum(["tests", "diary", "charts", "summary"]))
-    .min(1, "Выберите хотя бы один раздел"),
-  generateShareLink: z.boolean().optional().default(false),
-  shareTtlDays: z.number().int().min(1).max(30).optional().default(7),
-});
+export const exportRequestSchema = z
+  .object({
+    dateFrom: z.string().date("Некорректная дата начала"),
+    dateTo: z.string().date("Некорректная дата окончания"),
+    sections: z
+      .array(z.enum(["tests", "diary", "charts", "summary"]))
+      .min(1, "Выберите хотя бы один раздел"),
+    generateShareLink: z.boolean().optional().default(false),
+    shareTtlDays: z.number().int().min(1).max(30).optional().default(7),
+  })
+  .refine(
+    (d) => d.dateFrom <= d.dateTo,
+    { message: "Дата начала не может быть позже даты окончания", path: ["dateFrom"] }
+  )
+  .refine(
+    (d) => {
+      const today = new Date().toISOString().slice(0, 10);
+      return d.dateTo <= today;
+    },
+    { message: "Дата окончания не может быть в будущем", path: ["dateTo"] }
+  );
 export type ExportRequestInput = z.infer<typeof exportRequestSchema>;
 
 // ---------- Утилиты ответов API ----------

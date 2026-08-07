@@ -63,6 +63,16 @@ export type TestDetailDTO = {
   }[];
 };
 
+export type TestHistoryItem = {
+  id: string;
+  completedAt: string;
+  totalScore: number;
+  severity: string;
+  label: string;
+  test: { id: string; code: string; name: string };
+  answers: unknown;
+};
+
 export type DiaryEntryDTO = {
   id: string;
   date: string;
@@ -192,8 +202,8 @@ export const api = {
         }>(r)
       ),
     history: (testDefinitionId?: string) =>
-      fetch(`/api/tests/history${testDefinitionId ? `?testDefinitionId=${testDefinitionId}` : ""}`).then(
-        (r) => handle<{ items: any[] }>(r)
+      fetch(`/api/tests/history${testDefinitionId ? `?testDefinitionId=${testDefinitionId}` : ""}`).then((r) =>
+        handle<{ items: TestHistoryItem[] }>(r)
       ),
   },
   diary: {

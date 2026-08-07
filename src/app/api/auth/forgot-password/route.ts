@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { forgotPasswordSchema, apiError } from "@/lib/validation";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 const TOKEN_TTL_MS = 60 * 60 * 1000; // 1 час
 
@@ -50,7 +51,7 @@ export async function POST(req: Request) {
 
   const origin = new URL(req.url).origin;
   const resetUrl = `${origin}/?resetToken=${token}`;
-  console.log(`[auth] Ссылка сброса пароля для ${email}: ${resetUrl}`);
+  logger.info("Ссылка сброса пароля сгенерирована", { email, resetUrl });
 
   // В production resetUrl не возвращаем (там появится отправка почты).
   if (process.env.NODE_ENV !== "production") {

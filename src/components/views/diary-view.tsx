@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { api, type DiaryEntryDTO } from "@/lib/api-client";
 import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";

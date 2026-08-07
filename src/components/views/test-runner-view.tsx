@@ -94,13 +94,14 @@ export function TestRunnerView() {
   const progress = ((current + 1) / total) * 100;
 
   async function submit() {
+    if (!detail) return;
     setSubmitting(true);
     try {
       const payload = Object.entries(answers).map(([questionId, value]) => ({
         questionId,
         value,
       }));
-      const res = await api.tests.submit(detail!.definition.id, payload);
+      const res = await api.tests.submit(detail.definition.id, payload);
       setResult(res);
       if (res.crisisDetected) {
         setCrisisOpen(true);
