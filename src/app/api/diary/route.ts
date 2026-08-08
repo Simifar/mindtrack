@@ -80,6 +80,7 @@ export const POST = withApiHandler("diary.save", async (req, { logger }) => {
       sleepHours: sleepHours ?? null,
       energyLevel: energyLevel ?? null,
       notesCipher,
+      customFieldsJson: {},
       crisisDetected: crisis.detected,
     },
     update: {
@@ -87,6 +88,7 @@ export const POST = withApiHandler("diary.save", async (req, { logger }) => {
       sleepHours: sleepHours ?? null,
       energyLevel: energyLevel ?? null,
       notesCipher,
+      customFieldsJson: {},
       crisisDetected: crisis.detected,
     },
   });

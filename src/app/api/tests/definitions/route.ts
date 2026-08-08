@@ -34,7 +34,7 @@ export const GET = withApiHandler("tests.definitions", async () => {
     });
     for (const t of tags) {
       try {
-        const codes = t.conditionTag.recommendedTestCodes as string[];
+        const codes = (t.conditionTag.recommendedTestCodes as string[] | null) ?? [];
         codes.forEach((c) => recommendedCodes.add(c));
       } catch {
         /* ignore */

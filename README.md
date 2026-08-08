@@ -33,7 +33,7 @@
 
 - **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS 4, shadcn/ui, Zustand, TanStack Query.
 - **Backend:** Next.js API Routes, Bun runtime.
-- **База данных:** PostgreSQL (локально в Docker), Prisma ORM.
+- **База данных:** SQLite (файл `db/custom.db`), Prisma ORM. PostgreSQL остаётся опциональным вариантом для продакшена.
 - **Аутентификация:** кастомный JWT-слой на `jose` + `bcryptjs`.
 - **Шифрование:** AES-256-GCM для чувствительных данных (заметки дневника, ответы тестов).
 - **PDF:** `@react-pdf/renderer` (server-side, без headless-браузера).
@@ -43,7 +43,7 @@
 ### Требования
 
 - [Bun](https://bun.sh/) >= 1.1.0
-- Docker + Docker Compose (для локальной PostgreSQL)
+- SQLite уже встроен в Bun / зависимости, Docker **не требуется**
 
 ### Установка
 
@@ -59,14 +59,11 @@ bun install
 cp .env.example .env
 # Отредактируйте .env: укажите JWT_SECRET и ENCRYPTION_KEY
 
-# 4. Запустить локальную PostgreSQL
-bun run db:up
-
-# 5. Применить миграции и заполнить справочники
-bun run db:migrate
+# 4. Применить схему и заполнить справочники
+bun run db:push
 bun run db:seed
 
-# 6. Запустить dev-сервер
+# 5. Запустить dev-сервер
 bun dev
 ```
 
@@ -77,12 +74,8 @@ bun dev
 Создайте `.env` на основе `.env.example`:
 
 ```env
-# PostgreSQL (локальная разработка через Docker Compose)
-POSTGRES_USER=mindtrack
-POSTGRES_PASSWORD=mindtrack
-POSTGRES_DB=mindtrack
-POSTGRES_PORT=5432
-DATABASE_URL="postgresql://mindtrack:mindtrack@localhost:5432/mindtrack?schema=public"
+# SQLite — файл в папке проекта. Не требует Docker/PostgreSQL.
+DATABASE_URL="file:./db/custom.db"
 
 # JWT-секрет (минимум 16 символов)
 JWT_SECRET=your_random_secret_min_16_chars
@@ -96,7 +89,9 @@ ENCRYPTION_KEY=0000000000000000000000000000000000000000000000000000000000000000
 
 ## База данных
 
-Локальная разработка использует PostgreSQL в Docker. Миграции управляются через Prisma Migrate.
+Локальная разработка использует SQLite-файл `db/custom.db`. Схема синхронизируется через `bun run db:push`, справочники заполняются через `bun run db:seed`. Docker не требуется.
+
+Если в продакшене нужен PostgreSQL — создайте отдельную `prisma/schema.postgresql.prisma` и генерируйте клиент нужной схемой (`prisma generate --schema=...`). Текущая схема использует только универсальные типы (`String`, `Int`, `Float`, `Boolean`, `DateTime`, `Json`), совместимые с PostgreSQL и SQLite.
 
 ```bash
 bun run db:up      # запустить PostgreSQL
