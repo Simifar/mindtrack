@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUser, UnauthorizedError } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { onboardingSchema, apiError } from "@/lib/validation";
+import { withApiHandler } from "@/lib/route-handler";
 
 /** POST /api/onboarding/complete — сохраняет выбор тегов и завершает онбординг. */
-export async function POST(req: Request) {
-  let user;
-  try {
-    user = await requireUser();
-  } catch (e) {
-    if (e instanceof UnauthorizedError) return apiError("Не авторизован", 401);
-    throw e;
-  }
+export const POST = withApiHandler("onboarding.complete", async (req, { logger }) => {
+  const user = await requireUser();
 
   let body: unknown;
   try {
@@ -41,6 +36,7 @@ export async function POST(req: Request) {
     }),
   ]);
 
+  logger.info("onboarding.complete.success", { userId: user.id, tagCount: conditionTagIds.length });
   const updated = await db.user.findUnique({
     where: { id: user.id },
     select: {
@@ -52,4 +48,4 @@ export async function POST(req: Request) {
     },
   });
   return NextResponse.json({ user: updated });
-}
+});

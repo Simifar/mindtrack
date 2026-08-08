@@ -3,13 +3,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hashPassword, revokeAllUserSessions } from "@/lib/auth";
 import { resetPasswordSchema, apiError } from "@/lib/validation";
-import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { rateLimit } from "@/lib/rate-limit";
+import { withApiHandler } from "@/lib/route-handler";
 
 /**
  * POST /api/auth/reset-password — установка нового пароля по одноразовому токену.
  * После успеха все сессии пользователя отзываются — нужен повторный вход.
  */
-export async function POST(req: Request) {
+export const POST = withApiHandler("auth.resetPassword", async (req, { logger, ip }) => {
   let body: unknown;
   try {
     body = await req.json();
@@ -22,14 +23,15 @@ export async function POST(req: Request) {
   }
   const { token, password } = parsed.data;
 
-  const ip = clientIp(req);
   if (!rateLimit(`reset:${ip}`, 10, 10 * 60 * 1000).allowed) {
+    logger.warn("auth.resetPassword.rateLimited");
     return apiError("Слишком много попыток, попробуйте позже", 429);
   }
 
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const record = await db.passwordResetToken.findUnique({ where: { tokenHash } });
   if (!record || record.usedAt || record.expiresAt <= new Date()) {
+    logger.warn("auth.resetPassword.invalidToken", { hasRecord: !!record });
     return apiError("Ссылка недействительна или истекла", 400);
   }
 
@@ -40,5 +42,6 @@ export async function POST(req: Request) {
   ]);
   await revokeAllUserSessions(record.userId);
 
+  logger.info("auth.resetPassword.success", { userId: record.userId });
   return NextResponse.json({ ok: true });
-}
+});

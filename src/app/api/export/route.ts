@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUser, UnauthorizedError } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { exportRequestSchema, apiError } from "@/lib/validation";
 import { buildReportData, buildReportDocument } from "@/lib/pdf-report";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { randomBytes } from "crypto";
 import { Prisma } from "@prisma/client";
+import { withApiHandler } from "@/lib/route-handler";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,14 +24,8 @@ function parseDate(s: string): Date {
  *
  * Заголовок для скачивания: клиент вызывает fetch и использует blob.
  */
-export async function POST(req: Request) {
-  let user;
-  try {
-    user = await requireUser();
-  } catch (e) {
-    if (e instanceof UnauthorizedError) return apiError("Не авторизован", 401);
-    throw e;
-  }
+export const POST = withApiHandler("export.create", async (req, { logger }) => {
+  const user = await requireUser();
 
   let body: unknown;
   try {
@@ -96,6 +91,7 @@ export async function POST(req: Request) {
     if (!expiresAt) {
       return apiError("Не удалось создать ссылку", 500);
     }
+    logger.info("export.shareLink.created", { userId: user.id, shareToken, expiresAt: expiresAt.toISOString() });
     return NextResponse.json({
       shareUrl: `/?share=${shareToken}`,
       shareToken,
@@ -107,6 +103,7 @@ export async function POST(req: Request) {
   const doc = buildReportDocument(reportData);
   const pdfBuffer = await renderToBuffer(doc);
 
+  logger.info("export.pdf.generated", { userId: user.id, dateFrom, dateTo });
   return new Response(pdfBuffer as unknown as BodyInit, {
     headers: {
       "Content-Type": "application/pdf",
@@ -114,4 +111,4 @@ export async function POST(req: Request) {
       "Cache-Control": "no-store",
     },
   });
-}
+});

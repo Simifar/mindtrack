@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { withApiHandler } from "@/lib/route-handler";
 
-export async function GET() {
+export const GET = withApiHandler("auth.me", async () => {
   const user = await getCurrentUser();
-  if (!user) {
-    return NextResponse.json({ user: null });
-  }
   return NextResponse.json({ user });
-}
+});

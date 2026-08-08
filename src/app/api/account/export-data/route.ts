@@ -1,7 +1,7 @@
-import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUser, UnauthorizedError } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { decryptSafe } from "@/lib/crypto";
+import { withApiHandler } from "@/lib/route-handler";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,14 +10,8 @@ export const dynamic = "force-dynamic";
  * GET /api/account/export-data — экспорт ВСЕХ данных пользователя в JSON.
  * Право на портативность данных (GDPR / 152-ФЗ). Расшифровывает заметки и ответы.
  */
-export async function GET() {
-  let user;
-  try {
-    user = await requireUser();
-  } catch (e) {
-    if (e instanceof UnauthorizedError) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
-    throw e;
-  }
+export const GET = withApiHandler("account.exportData", async (_req, { logger }) => {
+  const user = await requireUser();
 
   const [conditionTags, testResponses, diaryEntries, medications, exportLogs] = await Promise.all([
     db.userConditionTag.findMany({
@@ -89,6 +83,7 @@ export async function GET() {
     })),
   };
 
+  logger.info("account.exportData.success", { userId: user.id });
   return new Response(JSON.stringify(payload, null, 2), {
     headers: {
       "Content-Type": "application/json; charset=utf-8",
@@ -96,4 +91,4 @@ export async function GET() {
       "Cache-Control": "no-store",
     },
   });
-}
+});

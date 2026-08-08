@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { buildReportData } from "@/lib/pdf-report";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { buildReportDocument } from "@/lib/pdf-report";
+import { withApiHandler } from "@/lib/route-handler";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,10 +14,7 @@ export const dynamic = "force-dynamic";
  *  — возвращает JSON с данными отчёта (?format=json) или PDF (?format=pdf, по умолчанию).
  *  — TTL: после expiresAt доступ закрывается (403).
  */
-export async function GET(
-  req: Request,
-  { params }: { params: Promise<{ token: string }> }
-) {
+export const GET = withApiHandler("share.get", async (req, { logger, params }) => {
   const { token } = await params;
   const url = new URL(req.url);
   const format = url.searchParams.get("format") ?? "pdf";
@@ -27,8 +25,12 @@ export async function GET(
       user: { select: { email: true } },
     },
   });
-  if (!log) return NextResponse.json({ error: "Ссылка не найдена" }, { status: 404 });
+  if (!log) {
+    logger.warn("share.get.notFound", { token });
+    return NextResponse.json({ error: "Ссылка не найдена" }, { status: 404 });
+  }
   if (!log.expiresAt || log.expiresAt.getTime() < Date.now()) {
+    logger.warn("share.get.expired", { token });
     return NextResponse.json({ error: "Срок действия ссылки истёк" }, { status: 403 });
   }
 
@@ -56,11 +58,13 @@ export async function GET(
   });
 
   if (format === "json") {
+    logger.info("share.get.json", { token, format });
     return NextResponse.json({ report: reportData });
   }
 
   const doc = buildReportDocument(reportData);
   const pdfBuffer = await renderToBuffer(doc);
+  logger.info("share.get.pdf", { token, format });
   return new Response(pdfBuffer as unknown as BodyInit, {
     headers: {
       "Content-Type": "application/pdf",
@@ -68,4 +72,4 @@ export async function GET(
       "Cache-Control": "private, no-store",
     },
   });
-}
+});

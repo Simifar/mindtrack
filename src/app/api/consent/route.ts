@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUser, UnauthorizedError } from "@/lib/auth";
-import { apiError } from "@/lib/validation";
+import { requireUser } from "@/lib/auth";
+import { withApiHandler } from "@/lib/route-handler";
 
-export async function POST() {
-  let user;
-  try {
-    user = await requireUser();
-  } catch (e) {
-    if (e instanceof UnauthorizedError) return apiError("Не авторизован", 401);
-    throw e;
-  }
+export const POST = withApiHandler("consent.accept", async (_req, { logger }) => {
+  const user = await requireUser();
   const updated = await db.user.update({
     where: { id: user.id },
     data: { consentAcceptedAt: new Date() },
@@ -22,5 +16,6 @@ export async function POST() {
       onboardingCompleted: true,
     },
   });
+  logger.info("consent.accept.success", { userId: user.id });
   return NextResponse.json({ user: updated });
-}
+});

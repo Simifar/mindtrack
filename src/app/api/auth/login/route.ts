@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { verifyPassword, createSession } from "@/lib/auth";
 import { loginSchema, apiError } from "@/lib/validation";
-import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { rateLimit } from "@/lib/rate-limit";
+import { withApiHandler } from "@/lib/route-handler";
 
 /** Захэшированная dummy-строка: выравнивает время ответа, когда пользователь не найден. */
 const DUMMY_HASH = "$2b$12$6sn4731/vZadMuIepYSeqekneDZmu0iSksBs/jh7z.cwE/tJo5zLe";
 
 const WINDOW_MS = 10 * 60 * 1000;
 
-export async function POST(req: Request) {
+export const POST = withApiHandler("auth.login", async (req, { logger, ip }) => {
   let body: unknown;
   try {
     body = await req.json();
@@ -22,12 +23,12 @@ export async function POST(req: Request) {
   }
   const { email, password } = parsed.data;
   const emailLower = email.toLowerCase();
-  const ip = clientIp(req);
 
   // Rate limiting: по паре IP+email и шире — по IP.
   const byPair = rateLimit(`login:${ip}:${emailLower}`, 5, WINDOW_MS);
   const byIp = rateLimit(`login:${ip}`, 30, WINDOW_MS);
   if (!byPair.allowed || !byIp.allowed) {
+    logger.warn("auth.login.rateLimited", { email: emailLower });
     return apiError("Слишком много попыток, попробуйте позже", 429);
   }
 
@@ -35,10 +36,12 @@ export async function POST(req: Request) {
   // Всегда выполняем bcrypt compare — без timing-разницы между «нет пользователя» и «неверный пароль».
   const ok = await verifyPassword(password, user?.passwordHash ?? DUMMY_HASH);
   if (!user || !ok) {
+    logger.warn("auth.login.failed", { email: emailLower, reason: !user ? "userNotFound" : "wrongPassword" });
     return apiError("Неверный email или пароль", 401);
   }
 
   await createSession(user.id, user.email, req.headers.get("user-agent") ?? undefined);
+  logger.info("auth.login.success", { userId: user.id, email: user.email });
   return NextResponse.json({
     user: {
       id: user.id,
@@ -48,4 +51,4 @@ export async function POST(req: Request) {
       onboardingCompleted: user.onboardingCompleted,
     },
   });
-}
+});

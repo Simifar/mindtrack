@@ -2,8 +2,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { forgotPasswordSchema, apiError } from "@/lib/validation";
-import { rateLimit, clientIp } from "@/lib/rate-limit";
-import { logger } from "@/lib/logger";
+import { rateLimit } from "@/lib/rate-limit";
+import { withApiHandler } from "@/lib/route-handler";
 
 const TOKEN_TTL_MS = 60 * 60 * 1000; // 1 час
 
@@ -12,7 +12,7 @@ const TOKEN_TTL_MS = 60 * 60 * 1000; // 1 час
  * Ответ всегда одинаковый (анти-enumерация email).
  * Почтовой инфраструктуры нет: в dev-режиме ссылка пишется в лог и возвращается в ответе.
  */
-export async function POST(req: Request) {
+export const POST = withApiHandler("auth.forgotPassword", async (req, { logger, ip }) => {
   let body: unknown;
   try {
     body = await req.json();
@@ -24,9 +24,9 @@ export async function POST(req: Request) {
     return apiError("Ошибка валидации", 400, parsed.error.flatten().fieldErrors);
   }
   const email = parsed.data.email.toLowerCase();
-  const ip = clientIp(req);
 
   if (!rateLimit(`forgot:${ip}:${email}`, 3, 10 * 60 * 1000).allowed) {
+    logger.warn("auth.forgotPassword.rateLimited", { email });
     return apiError("Слишком много попыток, попробуйте позже", 429);
   }
 
@@ -34,6 +34,7 @@ export async function POST(req: Request) {
 
   const user = await db.user.findUnique({ where: { email } });
   if (!user) {
+    logger.info("auth.forgotPassword.userNotFound", { email });
     return NextResponse.json(okResponse);
   }
 
@@ -51,11 +52,11 @@ export async function POST(req: Request) {
 
   const origin = new URL(req.url).origin;
   const resetUrl = `${origin}/?resetToken=${token}`;
-  logger.info("Ссылка сброса пароля сгенерирована", { email, resetUrl });
+  logger.info("auth.forgotPassword.tokenGenerated", { userId: user.id, email, resetUrl });
 
   // В production resetUrl не возвращаем (там появится отправка почты).
   if (process.env.NODE_ENV !== "production") {
     return NextResponse.json({ ...okResponse, resetUrl });
   }
   return NextResponse.json(okResponse);
-}
+});

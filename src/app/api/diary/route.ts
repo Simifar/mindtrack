@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUser, UnauthorizedError } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { diaryEntrySchema, apiError } from "@/lib/validation";
 import { encrypt, decryptSafe } from "@/lib/crypto";
 import { detectCrisis } from "@/lib/crisis";
+import { withApiHandler } from "@/lib/route-handler";
 
 function startOfDayUTC(iso: string): Date {
   // Принимаем YYYY-MM-DD, создаём дату в UTC полдень (избегаем сдвига часового пояса).
@@ -13,14 +14,8 @@ function startOfDayUTC(iso: string): Date {
 }
 
 /** GET /api/diary?from=&to= — записи дневника в диапазоне (по умолчанию 30 дней). */
-export async function GET(req: Request) {
-  let user;
-  try {
-    user = await requireUser();
-  } catch (e) {
-    if (e instanceof UnauthorizedError) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
-    throw e;
-  }
+export const GET = withApiHandler("diary.list", async (req) => {
+  const user = await requireUser();
   const url = new URL(req.url);
   const to = url.searchParams.get("to");
   const from = url.searchParams.get("from");
@@ -48,17 +43,11 @@ export async function GET(req: Request) {
   }));
 
   return NextResponse.json({ items });
-}
+});
 
 /** POST /api/diary — upsert записи на день. */
-export async function POST(req: Request) {
-  let user;
-  try {
-    user = await requireUser();
-  } catch (e) {
-    if (e instanceof UnauthorizedError) return apiError("Не авторизован", 401);
-    throw e;
-  }
+export const POST = withApiHandler("diary.save", async (req, { logger }) => {
+  const user = await requireUser();
 
   let body: unknown;
   try {
@@ -102,6 +91,7 @@ export async function POST(req: Request) {
     },
   });
 
+  logger.info("diary.save.success", { userId: user.id, date, crisisDetected: crisis.detected });
   return NextResponse.json({
     entry: {
       id: entry.id,
@@ -113,4 +103,4 @@ export async function POST(req: Request) {
       crisisDetected: entry.crisisDetected,
     },
   });
-}
+});

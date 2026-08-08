@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { withApiHandler } from "@/lib/route-handler";
 
 /** GET /api/tests/[id] — полное определение теста с вопросами и вариантами. */
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export const GET = withApiHandler("tests.detail", async (_req, { logger, params }) => {
   const { id } = await params;
   const def = await db.testDefinition.findUnique({
     where: { id },
@@ -15,6 +13,7 @@ export async function GET(
     },
   });
   if (!def) {
+    logger.warn("tests.detail.notFound", { testDefinitionId: id });
     return NextResponse.json({ error: "Тест не найден" }, { status: 404 });
   }
 
@@ -63,4 +62,4 @@ export async function GET(
     questions,
     history,
   });
-}
+});

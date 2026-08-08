@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { withApiHandler } from "@/lib/route-handler";
 
 /**
  * GET /api/tests/definitions — список тестов.
  * Помечает рекомендованные на основе conditionTags пользователя + последние прохождения.
  */
-export async function GET() {
+export const GET = withApiHandler("tests.definitions", async () => {
   const user = await getCurrentUser();
 
   const definitions = await db.testDefinition.findMany({
@@ -80,4 +81,4 @@ export async function GET() {
   });
 
   return NextResponse.json({ definitions: result });
-}
+});

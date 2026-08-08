@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { withApiHandler } from "@/lib/route-handler";
 
 /** GET /api/onboarding — справочник ConditionTag + текущие выбранные теги пользователя. */
-export async function GET() {
+export const GET = withApiHandler("onboarding.get", async () => {
   const user = await getCurrentUser();
   const tags = await db.conditionTag.findMany({ orderBy: { name: "asc" } });
 
@@ -16,4 +17,4 @@ export async function GET() {
     selectedIds = links.map((l) => l.conditionTagId);
   }
   return NextResponse.json({ tags, selectedIds });
-}
+});

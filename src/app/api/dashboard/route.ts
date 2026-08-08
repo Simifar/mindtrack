@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUser, UnauthorizedError } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { decryptSafe } from "@/lib/crypto";
+import { withApiHandler } from "@/lib/route-handler";
 
 /**
  * GET /api/dashboard — сводка для дашборда:
@@ -9,14 +10,8 @@ import { decryptSafe } from "@/lib/crypto";
  *  - график настроения за 30 дней
  *  - напоминания (какие тесты «просрочены»)
  */
-export async function GET() {
-  let user;
-  try {
-    user = await requireUser();
-  } catch (e) {
-    if (e instanceof UnauthorizedError) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
-    throw e;
-  }
+export const GET = withApiHandler("dashboard", async () => {
+  const user = await requireUser();
 
   const now = new Date();
   const from30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -105,4 +100,4 @@ export async function GET() {
       totalTests: recentResponses.length,
     },
   });
-}
+});

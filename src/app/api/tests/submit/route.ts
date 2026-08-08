@@ -1,20 +1,15 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUser, UnauthorizedError } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { submitTestSchema, apiError } from "@/lib/validation";
 import { scoreTest, type AnswerValue } from "@/lib/test-scoring";
 import { encrypt } from "@/lib/crypto";
 import { detectCrisis } from "@/lib/crisis";
+import { withApiHandler } from "@/lib/route-handler";
 
 /** POST /api/tests/submit — принимает ответы, считает балл (сервер), сохраняет зашифрованно. */
-export async function POST(req: Request) {
-  let user;
-  try {
-    user = await requireUser();
-  } catch (e) {
-    if (e instanceof UnauthorizedError) return apiError("Не авторизован", 401);
-    throw e;
-  }
+export const POST = withApiHandler("tests.submit", async (req, { logger }) => {
+  const user = await requireUser();
 
   let body: unknown;
   try {
@@ -115,6 +110,14 @@ export async function POST(req: Request) {
     },
   });
 
+  logger.info("tests.submit.success", {
+    userId: user.id,
+    testDefinitionId: def.id,
+    responseId: response.id,
+    totalScore: result.totalScore,
+    severity: result.severity,
+    crisisDetected: result.crisisDetected || crisisFromFreeText,
+  });
   return NextResponse.json({
     responseId: response.id,
     totalScore: result.totalScore,
@@ -122,4 +125,4 @@ export async function POST(req: Request) {
     label: result.label,
     crisisDetected: result.crisisDetected || crisisFromFreeText,
   });
-}
+});

@@ -1,21 +1,16 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUser, UnauthorizedError, verifyPassword, hashPassword, revokeAllUserSessions } from "@/lib/auth";
+import { requireUser, verifyPassword, hashPassword, revokeAllUserSessions } from "@/lib/auth";
 import { changePasswordSchema, apiError } from "@/lib/validation";
-import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { rateLimit } from "@/lib/rate-limit";
+import { withApiHandler } from "@/lib/route-handler";
 
 /**
  * POST /api/auth/change-password — смена пароля залогиненным пользователем.
  * Требует текущий пароль; отзывает все прочие сессии пользователя.
  */
-export async function POST(req: Request) {
-  let user;
-  try {
-    user = await requireUser();
-  } catch (e) {
-    if (e instanceof UnauthorizedError) return apiError("Не авторизован", 401);
-    throw e;
-  }
+export const POST = withApiHandler("auth.changePassword", async (req, { logger, ip }) => {
+  const user = await requireUser();
 
   let body: unknown;
   try {
@@ -29,13 +24,14 @@ export async function POST(req: Request) {
   }
   const { currentPassword, newPassword } = parsed.data;
 
-  const ip = clientIp(req);
   if (!rateLimit(`change-password:${ip}:${user.id}`, 5, 10 * 60 * 1000).allowed) {
+    logger.warn("auth.changePassword.rateLimited", { userId: user.id });
     return apiError("Слишком много попыток, попробуйте позже", 429);
   }
 
   const dbUser = await db.user.findUnique({ where: { id: user.id } });
   if (!dbUser || !(await verifyPassword(currentPassword, dbUser.passwordHash))) {
+    logger.warn("auth.changePassword.wrongCurrent", { userId: user.id });
     return apiError("Неверный текущий пароль", 401);
   }
 
@@ -45,5 +41,6 @@ export async function POST(req: Request) {
   });
   await revokeAllUserSessions(user.id, user.sessionId);
 
+  logger.info("auth.changePassword.success", { userId: user.id });
   return NextResponse.json({ ok: true });
-}
+});

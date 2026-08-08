@@ -1,20 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { requireUser, UnauthorizedError } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { decryptSafe } from "@/lib/crypto";
+import { withApiHandler } from "@/lib/route-handler";
 
 /** GET /api/diary/[date] — запись за конкретный день (YYYY-MM-DD). */
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ date: string }> }
-) {
-  let user;
-  try {
-    user = await requireUser();
-  } catch (e) {
-    if (e instanceof UnauthorizedError) return NextResponse.json({ error: "Не авторизован" }, { status: 401 });
-    throw e;
-  }
+export const GET = withApiHandler("diary.getByDate", async (_req, { params }) => {
+  const user = await requireUser();
   const { date } = await params;
   const dateObj = new Date(date + "T12:00:00.000Z");
   if (isNaN(dateObj.getTime())) {
@@ -35,4 +27,4 @@ export async function GET(
       crisisDetected: entry.crisisDetected,
     },
   });
-}
+});

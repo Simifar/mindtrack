@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
+import { withApiHandler } from "@/lib/route-handler";
 
-export async function GET() {
-  return NextResponse.json({ message: "Hello, world!" });
-}
+export const GET = withApiHandler("root", async () => {
+  return NextResponse.json({ message: "MindTrack API" });
+});
