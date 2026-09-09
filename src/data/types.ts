@@ -22,3 +22,17 @@ export type Scale = {
   reviewStatus: ReviewStatus;
   tags: string[];
 };
+
+export type Emotion = {
+  id: string;
+  slug: string;
+  title: string;
+  shortDescription: string;
+  signs: string[];
+  bodySignals: string[];
+  commonThoughts: string[];
+  possibleNeeds: string[];
+  similarStates: string[];
+  tryNow: string[];
+  reviewStatus: ReviewStatus;
+};

@@ -97,8 +97,8 @@ export default function HomePage() {
             <p className="eyebrow">Эмоции простыми словами</p>
             <h2>Слова, которые помогают назвать состояние</h2>
           </div>
-          <Link className="text-link" href="/topics">
-            Все разделы <ArrowRight size={16} />
+          <Link className="text-link" href="/emotions">
+            Все эмоции <ArrowRight size={16} />
           </Link>
         </div>
         <div className="card-grid">
