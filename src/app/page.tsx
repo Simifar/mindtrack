@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowRight, BookOpen, Heart, Search, ShieldAlert, Sparkles } from "lucide-react";
+import { ArrowRight, BookOpen, Heart, Search, ShieldAlert } from "lucide-react";
 import { Catalog } from "@/components/catalog";
-import { CheckInFlow } from "@/components/check-in-flow";
 import { emotionPreview, supportActions, symptomPaths } from "@/data/journey";
 import { screeningScales } from "@/data/scales";
 import { topics } from "@/data/topics";
@@ -14,15 +13,15 @@ export default function HomePage() {
       <section className="hero">
         <div className="container hero-grid">
           <div>
-            <p className="eyebrow">MindTrack / самонаблюдение</p>
-            <h1>Что с тобой сейчас?</h1>
+            <p className="eyebrow">MindTrack / справочник-помощник</p>
+            <h1>Понятно о том, что с нами происходит</h1>
             <p className="lead">
-              Не нужно сразу знать название состояния. Начни с ощущения, опиши дискомфорт и получи направление:
-              успокоиться, понять, действовать или попросить помощи.
+              Спокойный русскоязычный справочник о переживаниях, ситуациях и практических шагах.
+              Читайте в удобном порядке, находите подходящие материалы и решайте, что может помочь именно сейчас.
             </p>
             <div className="hero-actions">
-              <Link className="button button-primary" href="/check-in">
-                <Sparkles size={18} /> Начать разбор
+              <Link className="button button-primary" href="/emotions">
+                <BookOpen size={18} /> Разобраться в эмоциях
               </Link>
               <Link className="button button-secondary" href="#catalog">
                 <Search size={18} /> Найти материал
@@ -31,8 +30,8 @@ export default function HomePage() {
           </div>
           <div className="hero-note">
             <Heart size={24} aria-hidden="true" />
-            <strong>Бережный путь</strong>
-            <p>Мы помогаем описать состояние без ярлыков и без давления искать диагноз в первые минуты.</p>
+            <strong>Без диагнозов и самотестов</strong>
+            <p>Материалы помогают подобрать слова, увидеть контекст и найти следующий безопасный шаг.</p>
           </div>
         </div>
       </section>
@@ -40,8 +39,8 @@ export default function HomePage() {
       <section className="container section">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Главные пути</p>
-            <h2>Выбери то, что сейчас ближе всего</h2>
+            <p className="eyebrow">Навигация по справочнику</p>
+            <h2>С чего начать чтение</h2>
           </div>
         </div>
         <div className="path-grid">
@@ -54,18 +53,6 @@ export default function HomePage() {
               </span>
             </Link>
           ))}
-        </div>
-      </section>
-
-      <section className="container section">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">Разобраться в себе</p>
-            <h2>Короткий маршрут самонаблюдения</h2>
-          </div>
-        </div>
-        <div className="checkin-shell">
-          <CheckInFlow />
         </div>
       </section>
 

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookOpen, Heart, NotebookPen, ShieldQuestion, Sparkles, Star } from "lucide-react";
+import { BookOpen, Heart, NotebookPen, Star } from "lucide-react";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.github.io/MindTrack";
@@ -24,8 +24,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <div className="container header-inner">
             <Link className="brand" href="/"><span className="brand-mark"><Heart size={17} /></span> MindTrack</Link>
             <nav aria-label="Основная навигация">
-              <Link href="/check-in"><ShieldQuestion size={16} /> Проверка</Link>
-              <Link href="/emotions"><Sparkles size={16} /> Эмоции</Link>
+              <Link href="/emotions"><BookOpen size={16} /> Эмоции</Link>
               <Link href="/situations"><BookOpen size={16} /> Ситуации</Link>
               <Link href="/tools"><BookOpen size={16} /> Инструменты</Link>
               <Link href="/journal"><NotebookPen size={16} /> Дневник</Link>
