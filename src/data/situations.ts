@@ -1,0 +1,61 @@
+import type { Situation } from "./types";
+
+export const situations: Situation[] = [
+  {
+    id: "situation-overload",
+    slug: "peregruzka",
+    title: "Перегрузка",
+    description: "Когда задач слишком много, а сил недостаточно, тело начинает сигнализировать о нехватке ресурса и повышенном напряжении.",
+    emotionIds: ["emotion-anxiety", "emotion-fatigue", "emotion-confusion"],
+    toolIds: ["tool-steps", "tool-rest", "tool-grounding"],
+    nextSteps: ["Сократить список до 1–3 важных дел", "Проверить сон, питание и отдых", "Не пытаться решить всё сразу"],
+    helpLevel: "self-help",
+    reviewStatus: "assessed",
+  },
+  {
+    id: "situation-conflict",
+    slug: "konflikt",
+    title: "Конфликт или напряжение в отношениях",
+    description: "Когда ситуация с близким, коллегой или окружением задевает важную потребность в безопасности, уважении или границах.",
+    emotionIds: ["emotion-anger", "emotion-shame", "emotion-loneliness"],
+    toolIds: ["tool-reframe", "tool-support-message", "tool-breathing"],
+    nextSteps: ["Сформулировать, что именно нарушило границы", "Выбрать безопасный момент для разговора", "Не смешивать личность и конкретное действие"],
+    helpLevel: "consider-help",
+    reviewStatus: "assessed",
+  },
+  {
+    id: "situation-uncertainty",
+    slug: "neopredelennost",
+    title: "Неопределённость",
+    description: "Когда чувство тревоги усиливается от неизвестности: непонятно, что будет дальше, и сложно удержать опору.",
+    emotionIds: ["emotion-anxiety", "emotion-confusion", "emotion-fear"],
+    toolIds: ["tool-grounding", "tool-reframe", "tool-steps"],
+    nextSteps: ["Назвать, что именно неизвестно", "Выписать ближайший безопасный шаг", "Спросить: «что можно контролировать прямо сейчас?»"],
+    helpLevel: "self-help",
+    reviewStatus: "assessed",
+  },
+  {
+    id: "situation-loss",
+    slug: "poterya",
+    title: "Потеря или резкое изменение",
+    description: "Когда образ жизни, связь, проект или привычный ритм внезапно исчезают, и тело не успевает адаптироваться.",
+    emotionIds: ["emotion-sadness", "emotion-loneliness", "emotion-confusion"],
+    toolIds: ["tool-support-message", "tool-rest", "tool-fact-and-thought"],
+    nextSteps: ["Не требовать от себя быстро «прийти в себя»", "Дать себе время на адаптацию", "Подумать, что нужно для поддержки и восстановления"],
+    helpLevel: "consider-help",
+    reviewStatus: "assessed",
+  },
+  {
+    id: "situation-crisis",
+    slug: "krizis",
+    title: "Кризис или непосредственная опасность",
+    description: "Когда есть ощущение, что безопасности нет, невозможно справляться и нужна срочная помощь рядом.",
+    emotionIds: ["emotion-fear", "emotion-anxiety", "emotion-loneliness"],
+    toolIds: ["tool-support-message", "tool-grounding"],
+    nextSteps: ["Обратиться за экстренной поддержкой", "Не оставаться одному, если это угрожает безопасности", "Сообщить о риске человеку, которому можно доверять"],
+    helpLevel: "urgent-help",
+    reviewStatus: "assessed",
+  },
+];
+
+export const situationsBySlug = Object.fromEntries(situations.map((item) => [item.slug, item]));

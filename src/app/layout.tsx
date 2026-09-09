@@ -26,6 +26,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
             <nav aria-label="Основная навигация">
               <Link href="/check-in"><ShieldQuestion size={16} /> Проверка</Link>
               <Link href="/emotions"><Sparkles size={16} /> Эмоции</Link>
+              <Link href="/situations"><BookOpen size={16} /> Ситуации</Link>
+              <Link href="/tools"><BookOpen size={16} /> Инструменты</Link>
               <Link href="/journal"><NotebookPen size={16} /> Дневник</Link>
               <Link href="/help"><BookOpen size={16} /> Помощь</Link>
               <Link href="/topics"><BookOpen size={16} /> Разделы</Link>

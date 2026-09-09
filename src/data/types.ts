@@ -36,3 +36,27 @@ export type Emotion = {
   tryNow: string[];
   reviewStatus: ReviewStatus;
 };
+
+export type Tool = {
+  id: string;
+  slug: string;
+  title: string;
+  purpose: string;
+  durationMinutes: number;
+  steps: string[];
+  suitableFor: string[];
+  cautions: string[];
+  reviewStatus: ReviewStatus;
+};
+
+export type Situation = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  emotionIds: string[];
+  toolIds: string[];
+  nextSteps: string[];
+  helpLevel: "self-help" | "consider-help" | "urgent-help";
+  reviewStatus: ReviewStatus;
+};

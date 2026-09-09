@@ -16,7 +16,9 @@ API Routes, server actions, Prisma, миграции, локальная БД, �
 прогресс, дневник, PDF и share-ссылки. Каталог теперь собирается из
 типизированных статических данных и работает без сервера.
 
-Публичные маршруты: `/`, `/topics`, `/topics/trevoga`,
+Публичные маршруты: `/`, `/check-in`, `/journal`, `/help`, `/emotions`,
+`/emotions/trevoga`, `/emotions/strakh`, `/situations`, `/situations/peregruzka`,
+`/tools`, `/tools/zazemlenie`, `/topics`, `/topics/trevoga`,
 `/topics/nastroenie`, `/topics/vnimanie`, `/topics/son`,
 `/scales/phq-9`, `/scales/gad-7`, `/scales/mdq`, `/scales/asrs-v1-1`,
 `/favorites`, а также `404.html`, `sitemap.xml`, `robots.txt`.

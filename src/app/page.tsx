@@ -101,6 +101,10 @@ export default function HomePage() {
             Все эмоции <ArrowRight size={16} />
           </Link>
         </div>
+        <div className="tool-links-row">
+          <Link className="button button-secondary" href="/tools">Что можно сделать сейчас</Link>
+          <Link className="button button-secondary" href="/situations">Ситуации и контексты</Link>
+        </div>
         <div className="card-grid">
           {emotionPreview.map((emotion) => (
             <article className="scale-card" key={emotion.title}>
