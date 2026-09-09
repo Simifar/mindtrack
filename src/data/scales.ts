@@ -1,0 +1,10 @@
+import type { Scale } from "./types";
+
+export const screeningScales: Scale[] = [
+  { id: "scale-phq9", slug: "phq-9", title: "PHQ-9", shortTitle: "Шкала депрессии", summary: "Девять вопросов о самочувствии за последние две недели.", description: "PHQ-9 — краткий опросник для оценки выраженности депрессивных симптомов. Результат не является диагнозом и должен обсуждаться со специалистом.", topicIds: ["topic-mood"], audience: "Взрослые и подростки по согласованию со специалистом", durationMinutes: 5, sourceUrl: null, reviewStatus: "assessed", tags: ["настроение", "скрининг"] },
+  { id: "scale-gad7", slug: "gad-7", title: "GAD-7", shortTitle: "Шкала тревожности", summary: "Семь вопросов о тревоге и беспокойстве за последние две недели.", description: "GAD-7 помогает структурировать наблюдения за тревожными симптомами. Это не диагностический инструмент и не замена очной помощи.", topicIds: ["topic-anxiety"], audience: "Взрослые", durationMinutes: 4, sourceUrl: null, reviewStatus: "assessed", tags: ["тревога", "скрининг"] },
+  { id: "scale-mdq", slug: "mdq", title: "MDQ", shortTitle: "Скрининг биполярного спектра", summary: "Вопросы о необычных периодах подъёма настроения и активности.", description: "MDQ — скрининговый опросник, который может помочь подготовиться к разговору с психиатром. Положительный результат не подтверждает диагноз.", topicIds: ["topic-mood"], audience: "Взрослые", durationMinutes: 7, sourceUrl: null, reviewStatus: "pending", tags: ["настроение", "скрининг"] },
+  { id: "scale-asrs", slug: "asrs-v1-1", title: "ASRS-v1.1", shortTitle: "Скрининг СДВГ у взрослых", summary: "Короткий опросник о внимании и организации в течение последних шести месяцев.", description: "ASRS-v1.1 предназначен для первичного самонаблюдения и подготовки вопросов специалисту. Он не устанавливает диагноз.", topicIds: ["topic-attention"], audience: "Взрослые", durationMinutes: 5, sourceUrl: null, reviewStatus: "pending", tags: ["внимание", "скрининг"] },
+];
+
+export const allScales = screeningScales;

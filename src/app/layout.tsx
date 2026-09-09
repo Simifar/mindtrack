@@ -1,35 +1,40 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import Link from "next/link";
+import { BookOpen, Heart, Star } from "lucide-react";
 import "./globals.css";
-import { Toaster } from "@/components/ui/toaster";
-import { ThemeProvider } from "@/components/app/theme-provider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin", "cyrillic"],
-});
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.github.io/MindTrack";
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export const metadata: Metadata = {
-  title: "MindTrack — self-tracker психического состояния",
-  description:
-    "Персональный self-tracker психического состояния. Опросники, дневник настроения, графики и отчёт для врача. Не медицинское ПО.",
-  keywords: ["MindTrack", "self-tracker", "PHQ-9", "GAD-7", "ментальное здоровье", "дневник настроения"],
-  authors: [{ name: "MindTrack" }],
-  robots: { index: false, follow: false },
+  metadataBase: new URL(siteUrl),
+  title: { default: "MindTrack — справочник о самонаблюдении", template: "%s — MindTrack" },
+  description: "Русскоязычный статический справочник о настроении, тревоге, сне и внимании.",
+  alternates: { canonical: "/" },
+  openGraph: { title: "MindTrack", description: "Справочник о самонаблюдении", type: "website", images: [`${basePath}/og.png`] },
+  robots: { index: true, follow: true },
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ru" suppressHydrationWarning>
-      <body className={`${geistSans.variable} antialiased bg-background text-foreground`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
-          {children}
-          <Toaster />
-        </ThemeProvider>
+    <html lang="ru">
+      <body>
+        <header className="site-header">
+          <div className="container header-inner">
+            <Link className="brand" href="/"><span className="brand-mark"><Heart size={17} /></span> MindTrack</Link>
+            <nav aria-label="Основная навигация">
+              <Link href="/topics"><BookOpen size={16} /> Разделы</Link>
+              <Link href="/favorites"><Star size={16} /> Избранное</Link>
+            </nav>
+          </div>
+        </header>
+        <main>{children}</main>
+        <footer className="site-footer">
+          <div className="container footer-inner">
+            <span>MindTrack — справочный проект, не медицинская рекомендация.</span>
+            <Link href="/topics">Каталог материалов</Link>
+          </div>
+        </footer>
       </body>
     </html>
   );
