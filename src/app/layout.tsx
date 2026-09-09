@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { BookOpen, Heart, NotebookPen, Star } from "lucide-react";
+import { BookOpen, ClipboardList, Heart, Star, Upload } from "lucide-react";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://example.github.io/MindTrack";
@@ -24,12 +24,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <div className="container header-inner">
             <Link className="brand" href="/"><span className="brand-mark"><Heart size={17} /></span> MindTrack</Link>
             <nav aria-label="Основная навигация">
-              <Link href="/emotions"><BookOpen size={16} /> Эмоции</Link>
-              <Link href="/situations"><BookOpen size={16} /> Ситуации</Link>
-              <Link href="/tools"><BookOpen size={16} /> Инструменты</Link>
-              <Link href="/journal"><NotebookPen size={16} /> Дневник</Link>
+              <Link href="/scales"><ClipboardList size={16} /> Тесты</Link>
+              <Link href="/results"><Upload size={16} /> Результаты</Link>
               <Link href="/help"><BookOpen size={16} /> Помощь</Link>
-              <Link href="/topics"><BookOpen size={16} /> Разделы</Link>
               <Link href="/favorites"><Star size={16} /> Избранное</Link>
             </nav>
           </div>
@@ -38,7 +35,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <footer className="site-footer">
           <div className="container footer-inner">
             <span>MindTrack — справочный проект, не медицинская рекомендация.</span>
-            <Link href="/topics">Каталог материалов</Link>
+            <Link href="/scales">Каталог тестов</Link>
           </div>
         </footer>
       </body>

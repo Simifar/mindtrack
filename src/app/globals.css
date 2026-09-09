@@ -18,6 +18,8 @@ nav { display: flex; gap: 18px; min-width: 0; }
 nav a { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: .95rem; }
 nav a:hover, nav a:focus-visible { color: var(--brand); }
 .hero { background: linear-gradient(135deg, #eef5ff, #f8fbff); border-bottom: 1px solid var(--line); padding: clamp(48px, 8vw, 76px) 0; }
+.catalog-hero { padding-bottom: clamp(44px, 7vw, 64px); }
+.catalog-hero h1 { max-width: 820px; }
 .hero-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(260px, .8fr); gap: clamp(28px, 6vw, 64px); align-items: center; }
 h1, h2, h3 { line-height: 1.15; letter-spacing: -.02em; overflow-wrap: anywhere; }
 h1 { font-size: clamp(2.2rem, 5vw, 4.1rem); max-width: 720px; margin: 10px 0 20px; }
@@ -65,6 +67,7 @@ input:focus, select:focus, button:focus-visible, a:focus-visible { outline: 3px 
 .detail-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(240px, .8fr); gap: 28px; margin-top: 32px; }
 .prose-block { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 26px; } .prose-block h2 { font-size: 1.35rem; }
 .related-box { display: flex; flex-direction: column; gap: 10px; align-self: start; } .related-box h2 { font-size: 1.2rem; }
+.result-cta { margin-top: 10px; }
 .status-line { border-top: 1px solid var(--line); color: var(--muted); display: flex; font-size: .83rem; gap: 6px; margin-top: 13px; padding-top: 13px; }
 .notice { background: #fff7ed; border-color: #fed7aa; margin-top: 18px; } .notice strong { color: #9a3412; } .notice p { margin-bottom: 0; }
 .empty-state, .empty-page { text-align: center; } .empty-state { background: #fff; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); padding: 28px; } .empty-page { padding-top: 110px; padding-bottom: 110px; }
@@ -102,6 +105,19 @@ input:focus, select:focus, button:focus-visible, a:focus-visible { outline: 3px 
 .journal-form input, .journal-form select, .journal-form textarea { width: 100%; }
 .journal-form textarea { min-height: 90px; resize: vertical; }
 .journal-log { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 20px; }
+.how-it-works { align-items: start; background: #fff; border: 1px solid var(--line); border-radius: 16px; display: grid; gap: 18px; grid-template-columns: repeat(3, 1fr); padding: 20px; }
+.how-it-works div { display: grid; gap: 5px; grid-template-columns: auto 1fr; }
+.how-it-works svg { color: var(--brand); grid-row: span 2; }
+.how-it-works strong { align-self: end; }
+.how-it-works p { color: var(--muted); font-size: .92rem; grid-column: 2; margin: 0; }
+.how-it-works > .text-link { align-self: center; }
+.results-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(280px, .9fr); gap: 22px; margin-top: 28px; }
+.results-layout > div { display: flex; flex-direction: column; gap: 18px; }
+.import-box { display: flex; flex-direction: column; gap: 12px; }
+.import-box h2, .import-box p { margin: 0; }
+.file-button { position: relative; overflow: hidden; width: fit-content; }
+.file-button input { cursor: pointer; inset: 0; opacity: 0; position: absolute; }
+code { background: var(--soft); border-radius: 4px; font-size: .88em; padding: 2px 4px; }
 .entry-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .entry-list li { background: #f8fafc; border: 1px solid var(--line); border-radius: 12px; display: flex; flex-direction: column; gap: 5px; padding: 12px; }
 .entry-list strong { font-size: 1rem; }
@@ -123,7 +139,7 @@ input:focus, select:focus, button:focus-visible, a:focus-visible { outline: 3px 
   .hero-actions { flex-direction: column; margin-top: 22px; }
   .hero-actions .button, .topic-strip .text-link { width: 100%; }
   .button { min-height: 48px; }
-  .hero-grid, .detail-layout, .card-grid, .topic-grid, .path-grid, .help-grid, .journal-layout, .choice-grid, .field-grid { grid-template-columns: 1fr; gap: 18px; }
+  .hero-grid, .detail-layout, .card-grid, .topic-grid, .path-grid, .help-grid, .journal-layout, .results-layout, .how-it-works, .choice-grid, .field-grid { grid-template-columns: 1fr; gap: 18px; }
   .hero-note { padding: 20px; }
   .filters { flex-direction: column; gap: 10px; }
   .topic-filter, .topic-filter select { display: block; width: 100%; }
