@@ -23,6 +23,15 @@ export type Scale = {
   tags: string[];
 };
 
+export type TestResult = {
+  id: string;
+  scaleId: string;
+  date: string;
+  score: number;
+  note: string;
+  importedAt: string;
+};
+
 export type Emotion = {
   id: string;
   slug: string;

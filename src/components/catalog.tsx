@@ -39,7 +39,7 @@ export function Catalog({ items, topics }: { items: Scale[]; topics: Topic[] }) 
       <div className="card-grid">{visible.map((item) => <article className="scale-card" key={item.id}>
         <div className="card-top"><span className="tag">{item.tags[0]}</span><button className="icon-button" onClick={() => toggleFavorite(item.id)} aria-label={isFavorite(item.id) ? `Убрать ${item.title} из избранного` : `Добавить ${item.title} в избранное`}><Star size={18} fill={isFavorite(item.id) ? "currentColor" : "none"} /></button></div>
         <h3><Link href={`/scales/${item.slug}`}>{item.title}</Link></h3><p className="card-title">{item.shortTitle}</p><p>{item.summary}</p>
-        <div className="card-meta"><span>{item.durationMinutes} мин</span><Link className="text-link" href={`/scales/${item.slug}`}>Подробнее →</Link></div>
+        <div className="card-meta"><span>{item.durationMinutes} мин</span><Link className="text-link" href={`/scales/${item.slug}`}>О тесте →</Link></div>
       </article>)}</div>
       {pageCount > 1 && <nav className="pagination" aria-label="Страницы каталога">{Array.from({ length: pageCount }, (_, index) => index + 1).map((item) => <Link aria-current={item === currentPage ? "page" : undefined} className={item === currentPage ? "current" : ""} href={pageHref(item)} key={item}>{item}</Link>)}</nav>}
       {filtered.length === 0 && <div className="empty-state">Ничего не найдено. Попробуйте изменить запрос или раздел.</div>}
