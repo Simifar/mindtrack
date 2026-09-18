@@ -158,7 +158,7 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
               <span className="pb-1 text-lg text-muted-foreground">{formatScore(def, r).replace(String(r.totalScore), "").trim()}</span>
             </div>
 
-            {r.normalizedScore !== undefined && def.scoring.normalizedScore && (
+            {r.normalizedScore !== undefined && def.scoring.mode === "sum" && def.scoring.normalizedScore && (
               <p className="text-sm text-muted-foreground">Нормированный результат WHO-5: <strong>{r.normalizedScore}</strong> {def.scoring.normalizedScore.label}</p>
             )}
 

@@ -7,63 +7,10 @@
  * Это НЕ диагноз — только инструмент самонаблюдения.
  */
 
-export interface TestOption {
-  value: number;
-  label: string;
-}
+import type { TestDefinition, TestOption } from "@/domain/tests/types";
 
-export interface TestBand {
-  max: number;
-  severity: string;
-  label: string;
-  advice: string;
-}
-
-export interface TestSource {
-  title: string;
-  url: string;
-  version: string;
-  translation: string;
-  licensing: string;
-}
-
-export interface TestScoring {
-  mode: "sum" | "threshold" | "mdq";
-  minValuePerItem?: number;
-  minItemsMeetingThreshold?: number;
-  itemThresholds?: number[];
-  displayMaxScore?: number;
-  reverseQuestionIndexes?: number[];
-  positiveSeverity?: string;
-  positiveLabel?: string;
-  positiveAdvice?: string;
-  negativeSeverity?: string;
-  negativeLabel?: string;
-  negativeAdvice?: string;
-  bands?: TestBand[];
-  normalizedScore?: { multiplier: number; max: number; label: string };
-  /** Индексы вопросов (0-based) — триггеры кризисного баннера. */
-  crisisQuestionIndexes?: number[];
-}
-
-export interface TestDefinition {
-  code: string;
-  name: string;
-  short: string;
-  description: string;
-  /** За какой период спрашивают (подсказка на экране прохождения). */
-  timeframe: string;
-  periodicity: string;
-  estimatedMinutes?: number;
-  ageGroup?: string;
-  questions: string[];
-  questionOptions?: TestOption[][];
-  options: TestOption[];
-  scoreUnit?: string;
-  scoring: TestScoring;
-  source: string;
-  sourceInfo: TestSource;
-}
+export type { ScoreResult, Severity } from "@/domain/tests/types";
+export type { TestBand, TestDefinition, TestOption, TestScoring, TestSource } from "@/domain/tests/types";
 
 export const FREQUENCY_4 = [
   { value: 0, label: "Совсем не беспокоило" },
@@ -458,121 +405,8 @@ export const ALL_TESTS: TestDefinition[] = [
   TESTS_WHO5,
 ];
 
-export interface ScoreResult {
-  totalScore: number;
-  severity: string;
-  label: string;
-  advice: string;
-  crisisDetected: boolean;
-  normalizedScore?: number;
-  details?: { symptomCount: number; coOccurred: boolean; impact: number };
-}
-
-export function getOptions(def: TestDefinition, questionIndex: number): TestOption[] {
-  return def.questionOptions?.[questionIndex] ?? def.options;
-}
-
-function scoreValue(def: TestDefinition, questionIndex: number, value: number): number {
-  return def.scoring.reverseQuestionIndexes?.includes(questionIndex) ? 4 - value : value;
-}
-
-/** Чистый подсчёт результата по ответам (индекс вопроса → значение). */
-export function scoreTest(def: TestDefinition, answers: Record<number, number>): ScoreResult {
-  const values = def.questions.map((_, i) => answers[i] ?? 0);
-  const crisisDetected = (def.scoring.crisisQuestionIndexes ?? []).some((i) => (values[i] ?? 0) > 0);
-
-  if (def.scoring.mode === "threshold") {
-    const thresholds = def.scoring.itemThresholds ?? values.map(() => def.scoring.minValuePerItem ?? 1);
-    const count = values.filter((v, index) => v >= (thresholds[index] ?? thresholds[thresholds.length - 1] ?? 1)).length;
-    const positive = count >= (def.scoring.minItemsMeetingThreshold ?? 1);
-    return {
-      totalScore: count,
-      severity: positive ? (def.scoring.positiveSeverity ?? "positive") : (def.scoring.negativeSeverity ?? "negative"),
-      label: positive ? (def.scoring.positiveLabel ?? "Положительный") : (def.scoring.negativeLabel ?? "Отрицательный"),
-      advice: positive ? (def.scoring.positiveAdvice ?? "") : (def.scoring.negativeAdvice ?? ""),
-      crisisDetected,
-    };
-  }
-
-  if (def.scoring.mode === "mdq") {
-    const symptomCount = values.slice(0, 13).filter((value) => value > 0).length;
-    const coOccurred = values[13] > 0;
-    const impact = values[14] ?? 0;
-    const positive = symptomCount >= (def.scoring.minItemsMeetingThreshold ?? 7) && coOccurred && impact >= 2;
-    const needsContext = !positive && symptomCount >= (def.scoring.minItemsMeetingThreshold ?? 7);
-    return {
-      totalScore: symptomCount,
-      severity: positive ? (def.scoring.positiveSeverity ?? "positive") : needsContext ? "context" : (def.scoring.negativeSeverity ?? "negative"),
-      label: positive ? (def.scoring.positiveLabel ?? "Положительный") : needsContext ? "Нужен дополнительный контекст" : (def.scoring.negativeLabel ?? "Отрицательный"),
-      advice: positive
-        ? (def.scoring.positiveAdvice ?? "")
-        : needsContext
-          ? `Отмечено ${symptomCount} из 13 симптомов, но положительный скрининг MDQ требует также совпадения симптомов по времени и как минимум умеренного влияния на жизнь. Проверьте эти ответы и обсудите результат с психиатром — это не диагноз.`
-          : (def.scoring.negativeAdvice ?? ""),
-      crisisDetected,
-      details: { symptomCount, coOccurred, impact },
-    };
-  }
-
-  const total = values.reduce((s, v, index) => s + scoreValue(def, index, v), 0);
-  const bands = def.scoring.bands ?? [];
-  const band = bands.find((b) => total <= b.max) ?? bands[bands.length - 1] ?? {
-    severity: "none",
-    label: "—",
-    advice: "",
-  };
-  return {
-    totalScore: total,
-    severity: band.severity,
-    label: band.label,
-    advice: band.advice,
-    crisisDetected,
-    normalizedScore: def.scoring.normalizedScore ? total * def.scoring.normalizedScore.multiplier : undefined,
-  };
-}
-
-/** Максимально возможный балл теста (для подписи «12 / 27»). */
-export function maxScore(def: TestDefinition): number {
-  if (def.scoring.displayMaxScore !== undefined) return def.scoring.displayMaxScore;
-  const optMax = Math.max(...def.options.map((o) => o.value));
-  const scoredQuestionCount = def.scoring.mode === "mdq" ? 13 : def.questions.length;
-  return optMax * scoredQuestionCount;
-}
-
-export function formatScore(def: TestDefinition, result: ScoreResult): string {
-  const unit = def.scoreUnit ? ` ${def.scoreUnit}` : "";
-  return `${result.totalScore} из ${maxScore(def)}${unit}`;
-}
-
-/** Текстовый экспорт результата — для отправки врачу / себе. */
-export function formatResultText(opts: {
-  def: TestDefinition;
-  answers: Record<number, number>;
-  result: ScoreResult;
-  date: Date;
-}): string {
-  const { def, answers, result, date } = opts;
-  const lines: string[] = [];
-  lines.push(`MindTrack — результат самонаблюдения (НЕ диагноз)`);
-  lines.push(`${def.name}`);
-  lines.push(`Дата: ${date.toLocaleString("ru-RU")}`);
-  lines.push(`Балл: ${formatScore(def, result)} — ${result.label}`);
-  if (result.normalizedScore !== undefined && def.scoring.normalizedScore) {
-    lines.push(`Нормированный результат WHO-5: ${result.normalizedScore} ${def.scoring.normalizedScore.label}`);
-  }
-  if (result.details) {
-    lines.push(`Условия MDQ: ${result.details.symptomCount} из 13 симптомов; совпадение по времени — ${result.details.coOccurred ? "да" : "нет"}; влияние — ${result.details.impact}/3.`);
-  }
-  if (result.advice) lines.push(`Рекомендация: ${result.advice}`);
-  lines.push(``);
-  lines.push(`Ответы:`);
-  def.questions.forEach((q, i) => {
-    const opt = getOptions(def, i).find((o) => o.value === answers[i]);
-    lines.push(`${i + 1}. ${q} — ${opt ? `${opt.label} (${opt.value})` : "—"}`);
-  });
-  lines.push(``);
-  lines.push(`Источник шкалы: ${def.source}`);
-  lines.push(`Источник и сведения о версии: ${def.sourceInfo.url}`);
-  lines.push("Это не оценка риска и не диагноз. В непосредственной опасности звоните 112.");
-  return lines.join("\n");
-}
+export { getOptions } from "@/domain/tests/scoring-options";
+export { getMaxScore, maxScore, scoreTest } from "@/domain/tests/scoring";
+export { formatResultText, formatScore } from "@/domain/tests/formatting";
+export { validateAnswers } from "@/domain/tests/validation";
+export type { AnswerValidation } from "@/domain/tests/validation";

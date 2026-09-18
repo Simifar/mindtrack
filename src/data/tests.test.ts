@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { scoreTest, maxScore, formatResultText, getTest, ALL_TESTS } from "./tests";
+import { scoreTest, maxScore, formatResultText, getTest, ALL_TESTS, getOptions, validateAnswers } from "./tests";
 
 describe("static tests data", () => {
   it("каталог содержит 7 тестов", () => {
@@ -90,9 +90,47 @@ describe("scoreTest (static)", () => {
   });
 
   it("maxScore считает максимум", () => {
+    expect(ALL_TESTS.map(maxScore)).toEqual([27, 21, 13, 6, 40, 28, 25]);
+  });
+
+  it("принимает граничные значения всех вариантов ответа", () => {
+    for (const def of ALL_TESTS) {
+      const minimum: Record<number, number> = {};
+      const maximum: Record<number, number> = {};
+      def.questions.forEach((_, index) => {
+        const options = getOptions(def, index);
+        minimum[index] = options[0].value;
+        maximum[index] = options[options.length - 1].value;
+      });
+      expect(validateAnswers(def, minimum).valid).toBe(true);
+      expect(validateAnswers(def, maximum).valid).toBe(true);
+    }
+  });
+
+  it("отклоняет недопустимые и неполные ответы", () => {
     const def = getTest("PHQ9");
     if (!def) throw new Error("no PHQ9");
-    expect(maxScore(def)).toBe(27);
+    expect(validateAnswers(def, { 0: 99 }).valid).toBe(false);
+    expect(validateAnswers(def, { 0: 1 }, { requireComplete: true }).valid).toBe(false);
+    expect(scoreTest(def, { 0: 99 }).totalScore).toBe(0);
+  });
+
+  it("проверяет границы суммирования и нормализации", () => {
+    const phq = getTest("PHQ9");
+    const gad = getTest("GAD7");
+    const isi = getTest("ISI");
+    const pss = getTest("PSS10");
+    const who = getTest("WHO5");
+    if (!phq || !gad || !isi || !pss || !who) throw new Error("missing boundary test");
+
+    expect(scoreTest(phq, {}).totalScore).toBe(0);
+    expect(scoreTest(phq, Object.fromEntries(phq.questions.map((_, i) => [i, 3]))).totalScore).toBe(27);
+    expect(scoreTest(gad, Object.fromEntries(gad.questions.map((_, i) => [i, 3]))).totalScore).toBe(21);
+    expect(scoreTest(isi, Object.fromEntries(isi.questions.map((_, i) => [i, 4]))).totalScore).toBe(28);
+    expect(scoreTest(pss, {}).totalScore).toBe(16);
+    expect(scoreTest(pss, Object.fromEntries(pss.questions.map((_, i) => [i, 4]))).totalScore).toBe(24);
+    expect(scoreTest(who, {}).normalizedScore).toBe(0);
+    expect(scoreTest(who, Object.fromEntries(who.questions.map((_, i) => [i, 5]))).normalizedScore).toBe(100);
   });
 
   it("formatResultText содержит балл и ответы", () => {
