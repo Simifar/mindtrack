@@ -38,7 +38,7 @@
 
 ### Требования
 
-- [Bun](https://bun.sh/) >= 1.1.0
+- [Bun](https://bun.sh/) 1.3.14 (версия закреплена в `.bun-version`)
 
 ### Установка
 
@@ -48,10 +48,10 @@ git clone https://github.com/Simifar/mindtrack.git
 cd mindtrack
 
 # 2. Установить зависимости
-bun install
+bun install --frozen-lockfile
 
 # 3. Запустить dev-сервер
-bun dev
+bun run dev
 ```
 
 Откройте `http://localhost:3000`.
@@ -72,8 +72,8 @@ bun dev
 
 ## Архитектура
 
-- **Клиентский интерфейс:** интерактивные экраны работают на клиенте, состояние навигации синхронизировано с URL через Zustand.
-- **URL-маршруты:** `/tests`, `/tests/<slug>`, `/tests/<slug>/run`, `/results`, `/about`, `/help`, `/privacy`.
+- **Клиентский интерфейс:** интерактивные экраны работают на клиенте, URL является источником состояния маршрута.
+- **URL-маршруты:** `/tests`, `/tests/<slug>`, `/tests/<slug>/run`, `/results`, `/diary`, `/visit`, `/about`, `/help`, `/privacy`.
 - **Статика:** проекта собирается в обычный Next.js-билд, сервера и БД не нужно.
 
 ## Методики и ограничения
@@ -86,12 +86,14 @@ MDQ использует 13 симптомов и два дополнитель�
 
 ## Деплой
 
-Любой статический хостинг или Next.js-хостинг:
+Проект собирается в статический экспорт (`out/`) и не требует Node.js-сервера Next.js. Для локального предпросмотра:
 
 ```bash
 bun run build
 bun start
 ```
+
+Для GitHub Pages workflow задаёт `PAGES_BASE_PATH` автоматически. На другом project-site его можно задать перед сборкой, например `PAGES_BASE_PATH=/mindtrack bun run build`.
 
 ## Лицензия
 
