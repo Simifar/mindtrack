@@ -1,6 +1,6 @@
 "use client";
 
-import type { ScoreResult } from "@/data/tests";
+import { getTest, maxScore, scoreTest, type ScoreResult } from "@/data/tests";
 
 export interface SavedResult {
   id: string;
@@ -36,7 +36,23 @@ function parseResult(value: unknown): SavedResult | null {
     if (!/^\d+$/.test(key) || typeof answer !== "number" || !Number.isFinite(answer)) return null;
     answers[Number(key)] = answer;
   }
-  return { ...value, answers } as SavedResult;
+  const def = getTest(value.code);
+  if (!def) return { ...value, answers } as SavedResult;
+
+  // Пересчитываем сохранённые результаты текущим алгоритмом. Это мигрирует старые
+  // записи после исправлений скоринга, не меняя сами ответы пользователя.
+  const score = scoreTest(def, answers);
+  return {
+    ...value,
+    testName: def.name,
+    totalScore: score.totalScore,
+    maxScore: maxScore(def),
+    severity: score.severity,
+    label: score.label,
+    advice: score.advice,
+    crisisDetected: score.crisisDetected,
+    answers,
+  } as SavedResult;
 }
 
 function readAll(): SavedResult[] {
@@ -138,6 +154,8 @@ export function severityColor(severity: string): string {
     case "moderately_severe":
     case "positive":
       return "var(--chart-1)";
+    case "context":
+      return "var(--chart-4)";
     case "severe":
       return "var(--destructive)";
     default:

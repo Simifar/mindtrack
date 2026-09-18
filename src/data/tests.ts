@@ -499,11 +499,16 @@ export function scoreTest(def: TestDefinition, answers: Record<number, number>):
     const coOccurred = values[13] > 0;
     const impact = values[14] ?? 0;
     const positive = symptomCount >= (def.scoring.minItemsMeetingThreshold ?? 7) && coOccurred && impact >= 2;
+    const needsContext = !positive && symptomCount >= (def.scoring.minItemsMeetingThreshold ?? 7);
     return {
       totalScore: symptomCount,
-      severity: positive ? (def.scoring.positiveSeverity ?? "positive") : (def.scoring.negativeSeverity ?? "negative"),
-      label: positive ? (def.scoring.positiveLabel ?? "Положительный") : (def.scoring.negativeLabel ?? "Отрицательный"),
-      advice: positive ? (def.scoring.positiveAdvice ?? "") : (def.scoring.negativeAdvice ?? ""),
+      severity: positive ? (def.scoring.positiveSeverity ?? "positive") : needsContext ? "context" : (def.scoring.negativeSeverity ?? "negative"),
+      label: positive ? (def.scoring.positiveLabel ?? "Положительный") : needsContext ? "Нужен дополнительный контекст" : (def.scoring.negativeLabel ?? "Отрицательный"),
+      advice: positive
+        ? (def.scoring.positiveAdvice ?? "")
+        : needsContext
+          ? `Отмечено ${symptomCount} из 13 симптомов, но положительный скрининг MDQ требует также совпадения симптомов по времени и как минимум умеренного влияния на жизнь. Проверьте эти ответы и обсудите результат с психиатром — это не диагноз.`
+          : (def.scoring.negativeAdvice ?? ""),
       crisisDetected,
       details: { symptomCount, coOccurred, impact },
     };

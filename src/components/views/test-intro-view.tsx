@@ -56,6 +56,7 @@ export function TestIntroView({ code }: { code: string }) {
           </div>
           <div className="rounded-lg border p-4 text-sm leading-relaxed text-muted-foreground">
             Ответы сохраняются только в этом браузере. Если закрыть страницу, незавершённое прохождение можно будет продолжить с последнего вопроса.
+            {code === "MDQ" && " Для MDQ важны не только 13 симптомов: результат также учитывает, совпадали ли они по времени и насколько влияли на жизнь."}
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button onClick={start} className="flex-1"><Play className="h-4 w-4" />{hasDraft ? "Продолжить прохождение" : "Начать тест"}</Button>

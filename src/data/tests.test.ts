@@ -57,7 +57,14 @@ describe("scoreTest (static)", () => {
     const missingCondition = scoreTest(def, {
       0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 13: 0, 14: 3,
     });
-    expect(missingCondition.severity).toBe("negative");
+    expect(missingCondition.severity).toBe("context");
+
+    const allSymptomsOnly = scoreTest(def, {
+      0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 1, 10: 1, 11: 1, 12: 1, 13: 0, 14: 0,
+    });
+    expect(allSymptomsOnly.totalScore).toBe(13);
+    expect(allSymptomsOnly.severity).toBe("context");
+    expect(allSymptomsOnly.label).toBe("Нужен дополнительный контекст");
   });
 
   it("PSS-10: обратно кодирует пункты 4, 5, 7 и 8", () => {

@@ -157,6 +157,13 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
               <p className="text-sm text-muted-foreground">Нормированный результат WHO-5: <strong>{r.normalizedScore}</strong> {def.scoring.normalizedScore.label}</p>
             )}
 
+            {def.code === "MDQ" && r.details && (
+              <div className="rounded-lg bg-muted/60 p-3 text-sm text-muted-foreground">
+                <p className="font-medium text-foreground">Условия скрининга MDQ</p>
+                <p className="mt-1">Симптомы: {r.details.symptomCount} из 13 · совпадение по времени: {r.details.coOccurred ? "да" : "нет"} · влияние на жизнь: {r.details.impact}/3.</p>
+              </div>
+            )}
+
             <div
               className="rounded-xl border p-4"
               style={{
