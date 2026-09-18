@@ -4,10 +4,10 @@
 
 ## Как внести вклад
 
-1. Создайте [Issue](https://github.com/username/mindtrack/issues), чтобы обсудить изменение, если оно крупное.
+1. Создайте [Issue](https://github.com/Simifar/mindtrack/issues), чтобы обсудить изменение, если оно крупное.
 2. Форкните репозиторий и создайте ветку:
    ```bash
-   git checkout -b feature/краткое-описание
+   git checkout -b codex/краткое-описание
    ```
 3. Внесите изменения. Следите за тем, чтобы:
    - код проходил `bun run lint`;

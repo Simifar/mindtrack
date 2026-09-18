@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Вопрос о методике или ограничениях
+    url: https://github.com/Simifar/mindtrack/issues/new?labels=question&title=%5BQUESTION%5D%20
+    about: Опишите вопрос и укажите, о какой методике или части приложения речь.
+  - name: Сообщить об уязвимости
+    url: https://github.com/Simifar/mindtrack/security/policy
+    about: Не публикуйте детали потенциальной уязвимости в открытом Issue.

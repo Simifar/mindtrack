@@ -1,19 +1,26 @@
 {
   "name": "mindtrack",
   "version": "0.3.0",
-  "description": "Справочник скрининговых психологических тестов. Без регистрации, результаты только в браузере. Не медицинское ПО.",
+  "description": "Приватный справочник скрининговых опросников: без регистрации, серверов и передачи ответов.",
   "private": false,
   "license": "MIT",
-  "author": "",
+  "author": "Simifar",
   "repository": {
     "type": "git",
     "url": "https://github.com/Simifar/mindtrack.git"
   },
+  "homepage": "https://simifar.github.io/mindtrack/",
+  "bugs": {
+    "url": "https://github.com/Simifar/mindtrack/issues"
+  },
   "keywords": [
     "mental-health",
     "self-tracking",
+    "privacy-first",
+    "psychology",
     "phq-9",
     "gad-7",
+    "wellbeing",
     "nextjs"
   ],
   "engines": {
