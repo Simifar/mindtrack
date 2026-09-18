@@ -10,12 +10,12 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "MindTrack — self-tracker психического состояния",
+  title: "MindTrack — справочник психологических тестов",
   description:
-    "Персональный self-tracker психического состояния. Опросники, дневник настроения, графики и отчёт для врача. Не медицинское ПО.",
-  keywords: ["MindTrack", "self-tracker", "PHQ-9", "GAD-7", "ментальное здоровье", "дневник настроения"],
+    "Каталог скрининговых опросников самонаблюдения: PHQ-9, GAD-7, MDQ, ASRS, PSS-10, ISI, WHO-5. Без регистрации, результаты только в вашем браузере. Не медицинское ПО.",
+  keywords: ["MindTrack", "PHQ-9", "GAD-7", "MDQ", "ASRS", "PSS-10", "ISI", "WHO-5", "психологические тесты"],
   authors: [{ name: "MindTrack" }],
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({

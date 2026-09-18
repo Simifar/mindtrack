@@ -42,11 +42,10 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files — НИКОГДА не коммитить секреты. Только .env.example
+# env files — справочнику не нужны, но правило оставляем на всякий случай
 .env
 .env.local
 .env.*.local
-!.env.example
 
 # vercel
 .vercel

@@ -1,39 +1,24 @@
 "use client";
 import { create } from "zustand";
-import type { AppUser } from "@/lib/api-client";
 
-export type ViewId =
-  | "dashboard"
-  | "tests"
-  | "test-runner"
-  | "diary"
-  | "charts"
-  | "export"
-  | "settings";
+export type ViewId = "tests" | "test-run" | "results";
 
 interface AppState {
-  user: AppUser | null | undefined;
   view: ViewId;
-  activeTestId: string | null;
-  shareToken: string | null;
+  activeTestCode: string | null;
   crisisOpen: boolean;
 
-  setUser: (u: AppUser | null) => void;
   setView: (v: ViewId) => void;
-  openTest: (id: string) => void;
-  setShareToken: (t: string | null) => void;
+  openTest: (code: string) => void;
   setCrisisOpen: (v: boolean) => void;
 }
 
 export const useAppStore = create<AppState>((set) => ({
-  user: undefined,
-  view: "dashboard",
-  activeTestId: null,
-  shareToken: null,
+  view: "tests",
+  activeTestCode: null,
   crisisOpen: false,
-  setUser: (u) => set({ user: u }),
   setView: (v) => set({ view: v }),
-  openTest: (id) => set({ activeTestId: id, view: "test-runner" }),
-  setShareToken: (t) => set({ shareToken: t }),
+  openTest: (code) => set({ activeTestCode: code, view: "test-run" }),
   setCrisisOpen: (v) => set({ crisisOpen: v }),
 }));
+

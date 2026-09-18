@@ -18,8 +18,7 @@ jobs:
       - name: Secrets guard (no .env / *.db / *.pid tracked)
         run: |
           forbidden=$(git ls-files | grep -E '(^|/)\.env(\..+)?$|\.db(-journal)?$|\.sqlite3?$|\.pid$' || true)
-          # .env.example — можно, остальное запрещено
-          forbidden=$(echo "$forbidden" | grep -v '^\.env\.example$' || true)
+          # .env.example отсутствует в справочнике — любой .env запрещён
           if [ -n "$forbidden" ]; then
             echo "❌ Forbidden files tracked in git:"
             echo "$forbidden"
@@ -41,15 +40,6 @@ jobs:
 
       - name: Install dependencies
         run: bun install
-
-      - name: Setup environment
-        run: cp .env.example .env
-
-      - name: Generate Prisma client
-        run: bunx prisma generate
-
-      - name: Prisma schema valid
-        run: bunx prisma validate
 
       - name: Lint
         run: bun run lint

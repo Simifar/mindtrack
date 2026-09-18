@@ -1,54 +1,18 @@
 "use client";
-import { useEffect } from "react";
-import {
-  LayoutDashboard,
-  ClipboardList,
-  BookOpen,
-  LineChart,
-  FileDown,
-  Settings,
-  Brain,
-  LogOut,
-} from "lucide-react";
+import { ClipboardList, History, Brain } from "lucide-react";
 import { useAppStore, type ViewId } from "@/store/app-store";
-import { api } from "@/lib/api-client";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
 import { CrisisBanner } from "./crisis-banner";
 import { DisclaimerFooter } from "./disclaimer-footer";
 
-const NAV: { id: ViewId; label: string; icon: typeof LayoutDashboard }[] = [
-  { id: "dashboard", label: "Дашборд", icon: LayoutDashboard },
+const NAV: { id: ViewId; label: string; icon: typeof ClipboardList }[] = [
   { id: "tests", label: "Тесты", icon: ClipboardList },
-  { id: "diary", label: "Дневник", icon: BookOpen },
-  { id: "charts", label: "Графики", icon: LineChart },
-  { id: "export", label: "Отчёт врачу", icon: FileDown },
-  { id: "settings", label: "Настройки", icon: Settings },
+  { id: "results", label: "Результаты", icon: History },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const user = useAppStore((s) => s.user);
   const view = useAppStore((s) => s.view);
   const setView = useAppStore((s) => s.setView);
-  const setUser = useAppStore((s) => s.setUser);
-  const { toast } = useToast();
-
-  // Поднимаем crisis-баннер если в store когда-либо установлен флаг (слушаем через подписку).
-  // Сбрасываем при смене вью.
-  useEffect(() => {
-    useAppStore.setState({ crisisOpen: false });
-  }, [view]);
-
-  async function logout() {
-    try {
-      await api.auth.logout();
-      toast({ title: "Вы вышли из аккаунта" });
-    } catch {
-      /* ignore */
-    }
-    setUser(null);
-  }
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -60,13 +24,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <div>
             <div className="text-sm font-bold leading-tight">MindTrack</div>
-            <div className="text-[10px] text-muted-foreground">self-tracker</div>
+            <div className="text-[10px] text-muted-foreground">справочник тестов</div>
           </div>
         </div>
         <nav className="flex-1 space-y-1 p-3">
           {NAV.map((item) => {
             const Icon = item.icon;
-            const active = view === item.id || (item.id === "tests" && view === "test-runner");
+            const active = view === item.id || (item.id === "tests" && view === "test-run");
             return (
               <button
                 key={item.id}
@@ -84,15 +48,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
-        <div className="border-t p-3">
-          <div className="mb-2 truncate px-3 text-xs text-muted-foreground" title={user?.email}>
-            {user?.email}
-          </div>
-          <Button variant="ghost" size="sm" className="w-full justify-start" onClick={logout}>
-            <LogOut className="h-4 w-4" />
-            Выйти
-          </Button>
-        </div>
       </aside>
 
       {/* Контент + мобильный top-bar */}
@@ -104,9 +59,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </div>
             <span className="font-bold">MindTrack</span>
           </div>
-          <Button variant="ghost" size="sm" onClick={logout} aria-label="Выйти">
-            <LogOut className="h-4 w-4" />
-          </Button>
         </header>
 
         <main className="flex-1 pb-20 md:pb-0">{children}</main>
@@ -115,10 +67,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Мобильный bottom-nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-6 border-t bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-2 border-t bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
         {NAV.map((item) => {
           const Icon = item.icon;
-          const active = view === item.id || (item.id === "tests" && view === "test-runner");
+          const active = view === item.id || (item.id === "tests" && view === "test-run");
           return (
             <button
               key={item.id}
@@ -139,3 +91,4 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
