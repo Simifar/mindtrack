@@ -1,18 +1,19 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatScore, getTest, formatResultText, scoreTest } from "@/data/tests";
-import { loadResults, deleteResult, clearResults, severityColor } from "@/lib/results";
+import { clearResults, deleteResult, exportResultsJson, importResultsJson, loadResults, severityColor } from "@/lib/results";
 import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Download, Trash2 } from "lucide-react";
+import { Copy, Download, FileJson, Printer, Trash2, Upload } from "lucide-react";
 
 export function ResultsView() {
   const setView = useAppStore((s) => s.setView);
   const setCrisisOpen = useAppStore((s) => s.setCrisisOpen);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<ReturnType<typeof loadResults>>([]);
   const [openId, setOpenId] = useState<string | null>(items[0]?.id ?? null);
 
@@ -28,7 +29,7 @@ export function ResultsView() {
   function refresh() {
     const next = loadResults();
     setItems(next);
-    if (openId && !next.some((result) => result.id === openId)) setOpenId(next[0]?.id ?? null);
+    if (!openId || !next.some((result) => result.id === openId)) setOpenId(next[0]?.id ?? null);
   }
 
   function remove(id: string) {
@@ -95,6 +96,34 @@ export function ResultsView() {
     URL.revokeObjectURL(url);
   }
 
+  function downloadJson() {
+    const blob = new Blob([exportResultsJson()], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `mindtrack-results-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast({ title: "JSON-бэкап скачан" });
+  }
+
+  function importJson(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    file.text().then((raw) => {
+      try {
+        const result = importResultsJson(raw);
+        refresh();
+        toast({ title: `Импортировано результатов: ${result.imported}`, description: result.skipped ? `Пропущено записей: ${result.skipped}` : undefined });
+      } catch (error) {
+        toast({ title: error instanceof Error ? error.message : "Не удалось импортировать JSON", variant: "destructive" });
+      }
+    }).catch(() => toast({ title: "Не удалось прочитать файл", variant: "destructive" }));
+  }
+
   if (items.length === 0) {
     return (
       <div className="mx-auto max-w-2xl space-y-4 text-center">
@@ -102,25 +131,32 @@ export function ResultsView() {
         <p className="text-sm text-muted-foreground">
           Вы ещё не проходили тесты. Результаты сохраняются локально в вашем браузере.
         </p>
-        <Button onClick={() => setView("tests")}>К каталогу тестов</Button>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button onClick={() => setView("tests")}>К каталогу тестов</Button>
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4" /> Импортировать JSON</Button>
+        </div>
+        <input ref={fileInputRef} type="file" accept="application/json,.json" aria-label="Выберите JSON-файл" className="sr-only" onChange={importJson} />
       </div>
     );
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="no-print flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Результаты</h1>
           <p className="text-sm text-muted-foreground">История прохождений — только в вашем браузере</p>
         </div>
-        <Button variant="outline" size="sm" onClick={clearAll}>
-          <Trash2 className="h-4 w-4" />
-          Очистить всё
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={downloadJson}><FileJson className="h-4 w-4" /> Экспорт JSON</Button>
+          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4" /> Импорт JSON</Button>
+          <Button variant="outline" size="sm" onClick={clearAll}><Trash2 className="h-4 w-4" /> Очистить всё</Button>
+        </div>
       </div>
 
-      <div className="space-y-2">
+      <input ref={fileInputRef} type="file" accept="application/json,.json" aria-label="Выберите JSON-файл" className="sr-only" onChange={importJson} />
+
+      <div className="no-print space-y-2">
         {items.map((result) => (
           <button
             key={result.id}
@@ -163,7 +199,7 @@ export function ResultsView() {
                 Показать контакты помощи
               </Button>
             )}
-            <div className="flex flex-wrap gap-2">
+            <div className="no-print flex flex-wrap gap-2">
               <Button variant="outline" onClick={copyOpen} className="flex-1">
                 <Copy className="h-4 w-4" />
                 Скопировать текстом
@@ -171,6 +207,10 @@ export function ResultsView() {
               <Button variant="outline" onClick={downloadOpen} className="flex-1">
                 <Download className="h-4 w-4" />
                 Скачать .txt
+              </Button>
+              <Button variant="outline" onClick={() => window.print()} className="flex-1">
+                <Printer className="h-4 w-4" />
+                Печать
               </Button>
               <Button variant="outline" onClick={() => remove(open.id)} aria-label="Удалить результат">
                 <Trash2 className="h-4 w-4" />

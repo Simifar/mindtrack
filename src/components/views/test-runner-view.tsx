@@ -1,18 +1,20 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getOptions, getTest, scoreTest, maxScore, formatResultText, formatScore } from "@/data/tests";
 import { saveResult, severityColor } from "@/lib/results";
+import { deleteDraft, loadDraft, saveDraft } from "@/lib/progress";
 import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { AlertTriangle, ArrowLeft, ArrowRight, Check, Copy, Download, RotateCcw } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, Check, Copy, Download, Printer, RotateCcw } from "lucide-react";
 
 type Answers = Record<number, number>;
 
-export function TestRunnerView() {
-  const code = useAppStore((s) => s.activeTestCode);
+export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
+  const storeCode = useAppStore((s) => s.activeTestCode);
+  const code = codeOverride ?? storeCode;
   const setView = useAppStore((s) => s.setView);
   const setCrisisOpen = useAppStore((s) => s.setCrisisOpen);
   const { toast } = useToast();
@@ -21,6 +23,23 @@ export function TestRunnerView() {
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
   const [done, setDone] = useState<{ result: ReturnType<typeof scoreTest>; date: Date } | null>(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (!code) return;
+      const draft = loadDraft(code);
+      if (!draft) return;
+      setCurrent(draft.current);
+      setAnswers(draft.answers);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [code]);
+
+  useEffect(() => {
+    if (!code || done) return;
+    const timer = window.setTimeout(() => saveDraft({ code, current, answers }), 0);
+    return () => window.clearTimeout(timer);
+  }, [answers, code, current, done]);
 
   if (!def) {
     return (
@@ -39,6 +58,7 @@ export function TestRunnerView() {
   const progress = ((current + 1) / total) * 100;
 
   function restart() {
+    if (code) deleteDraft(code);
     setCurrent(0);
     setAnswers({});
     setDone(null);
@@ -65,6 +85,7 @@ export function TestRunnerView() {
       toast({ title: error instanceof Error ? error.message : "Не удалось сохранить результат", variant: "destructive" });
       return;
     }
+    deleteDraft(def.code);
     setDone({ result: r, date });
     if (r.crisisDetected) setCrisisOpen(true);
   }
@@ -164,7 +185,7 @@ export function TestRunnerView() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="no-print grid grid-cols-1 gap-2 sm:grid-cols-3">
               <Button variant="outline" onClick={copyResult}>
                 <Copy className="h-4 w-4" />
                 Скопировать текстом
@@ -172,6 +193,10 @@ export function TestRunnerView() {
               <Button variant="outline" onClick={downloadTxt}>
                 <Download className="h-4 w-4" />
                 Скачать .txt
+              </Button>
+              <Button variant="outline" onClick={() => window.print()}>
+                <Printer className="h-4 w-4" />
+                Печать отчёта
               </Button>
             </div>
 
@@ -182,7 +207,7 @@ export function TestRunnerView() {
           </CardContent>
         </Card>
 
-        <div className="flex gap-2">
+        <div className="no-print flex gap-2">
           <Button variant="outline" onClick={restart} className="flex-1">
             <RotateCcw className="h-4 w-4" />
             Пройти заново

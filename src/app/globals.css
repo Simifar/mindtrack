@@ -101,3 +101,27 @@
     @apply bg-primary/20;
   }
 }
+
+@media print {
+  aside,
+  header,
+  nav,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+
+  main {
+    max-width: none !important;
+    padding: 0 !important;
+  }
+
+  [class*="shadow"] {
+    box-shadow: none !important;
+  }
+}

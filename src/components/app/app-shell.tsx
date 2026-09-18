@@ -30,7 +30,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const view = useAppStore((s) => s.view);
   const setView = useAppStore((s) => s.setView);
 
-  const active = (id: ViewId) => view === id || (id === "tests" && view === "test-run");
+  const active = (id: ViewId) => view === id || (id === "tests" && (view === "test-detail" || view === "test-run"));
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -83,7 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Мобильный bottom-nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-2 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-3 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
         {NAV.map((item) => {
           const Icon = item.icon;
           return (

@@ -92,6 +92,39 @@ export function clearResults(): void {
   }
 }
 
+export function exportResultsJson(): string {
+  return JSON.stringify(
+    { source: "MindTrack", version: 2, exportedAt: new Date().toISOString(), results: loadResults() },
+    null,
+    2,
+  );
+}
+
+export function importResultsJson(raw: string): { imported: number; skipped: number } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    throw new Error("Файл не является корректным JSON");
+  }
+
+  const candidates = Array.isArray(parsed) ? parsed : isRecord(parsed) && Array.isArray(parsed.results) ? parsed.results : null;
+  if (!candidates) throw new Error("В JSON не найден список результатов");
+
+  const imported = candidates.map(parseResult).filter((item): item is SavedResult => item !== null);
+  const existing = readAll();
+  const byId = new Map(existing.map((item) => [item.id, item]));
+  for (const item of imported) byId.set(item.id, item);
+  const next = [...byId.values()].sort((a, b) => (a.dateISO < b.dateISO ? 1 : -1)).slice(0, MAX_ITEMS);
+
+  try {
+    localStorage.setItem(KEY, JSON.stringify(next));
+  } catch (error) {
+    throw new Error("Не удалось импортировать результаты в браузер", { cause: error });
+  }
+  return { imported: imported.length, skipped: candidates.length - imported.length };
+}
+
 /** Цвет бейджа по severity — через CSS-переменные темы. */
 export function severityColor(severity: string): string {
   switch (severity) {

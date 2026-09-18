@@ -22,6 +22,8 @@ export function DisclaimerFooter() {
           <div className="flex flex-wrap items-center gap-3">
             <span>Без регистрации · данные хранятся только в вашем браузере</span>
             <button type="button" className="underline" onClick={() => setView("methods")}>О методиках и ограничениях</button>
+            <button type="button" className="underline" onClick={() => setView("help")}>Помощь</button>
+            <button type="button" className="underline" onClick={() => setView("privacy")}>Приватность</button>
           </div>
         </div>
       </div>
