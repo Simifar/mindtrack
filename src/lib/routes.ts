@@ -1,4 +1,4 @@
-import type { ViewId } from "@/store/app-store";
+export type ViewId = "tests" | "test-detail" | "test-run" | "diary" | "visit" | "results" | "methods" | "help" | "privacy";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 

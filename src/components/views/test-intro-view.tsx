@@ -4,14 +4,12 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, Clock3, Play, RotateCcw, Users } from "lucide-react";
 import { getTest } from "@/data/tests";
 import { deleteDraft, loadDraft } from "@/lib/progress";
-import { useAppStore } from "@/store/app-store";
+import { navigateToTestRun, navigateToView } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function TestIntroView({ code }: { code: string }) {
   const def = getTest(code);
-  const setView = useAppStore((state) => state.setView);
-  const startTest = useAppStore((state) => state.startTest);
   const [hasDraft, setHasDraft] = useState(false);
 
   useEffect(() => {
@@ -22,7 +20,7 @@ export function TestIntroView({ code }: { code: string }) {
   if (!def) {
     return (
       <div className="mx-auto max-w-xl space-y-4">
-        <Button variant="ghost" onClick={() => setView("tests")}><ArrowLeft className="h-4 w-4" /> К каталогу тестов</Button>
+        <Button variant="ghost" onClick={() => navigateToView("tests")}><ArrowLeft className="h-4 w-4" /> К каталогу тестов</Button>
         <p className="text-muted-foreground">Тест не найден.</p>
       </div>
     );
@@ -31,7 +29,7 @@ export function TestIntroView({ code }: { code: string }) {
   const recallPeriod = code === "PSS10" ? "Последний месяц" : code === "ASRS" ? "Последние 6 месяцев" : code === "MDQ" ? "За всю жизнь" : "Последние 2 недели";
 
   function start() {
-    startTest(code);
+    navigateToTestRun(code);
   }
 
   function resetDraft() {
@@ -41,7 +39,7 @@ export function TestIntroView({ code }: { code: string }) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
-      <Button variant="ghost" onClick={() => setView("tests")}><ArrowLeft className="h-4 w-4" /> К каталогу тестов</Button>
+      <Button variant="ghost" onClick={() => navigateToView("tests")}><ArrowLeft className="h-4 w-4" /> К каталогу тестов</Button>
       <Card>
         <CardHeader>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Перед началом</p>

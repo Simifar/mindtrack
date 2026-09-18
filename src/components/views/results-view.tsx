@@ -4,6 +4,7 @@ import { formatScore, getTest, formatResultText, scoreTest } from "@/data/tests"
 import { clearResults, deleteResult, exportResultsJson, getResultCompleteness, importResultsJson, loadResults, severityColor } from "@/lib/results";
 import { STORAGE_KEYS } from "@/lib/storage/keys";
 import { subscribeStorage } from "@/lib/storage/storage";
+import { navigateToView } from "@/lib/navigation";
 import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,6 @@ import { Badge } from "@/components/ui/badge";
 import { Copy, Download, FileJson, Printer, Trash2, Upload } from "lucide-react";
 
 export function ResultsView() {
-  const setView = useAppStore((s) => s.setView);
   const setCrisisOpen = useAppStore((s) => s.setCrisisOpen);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -136,7 +136,7 @@ export function ResultsView() {
           Вы ещё не проходили тесты. Результаты сохраняются локально в вашем браузере.
         </p>
         <div className="flex flex-wrap justify-center gap-2">
-          <Button onClick={() => setView("tests")}>К каталогу тестов</Button>
+          <Button onClick={() => navigateToView("tests")}>К каталогу тестов</Button>
           <Button variant="outline" onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4" /> Импортировать JSON</Button>
         </div>
         <input ref={fileInputRef} type="file" accept="application/json,.json" aria-label="Выберите JSON-файл" className="sr-only" onChange={importJson} />

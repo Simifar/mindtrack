@@ -4,6 +4,7 @@ import { getOptions, getTest, scoreTest, maxScore, formatResultText, formatScore
 import { saveResult, severityColor } from "@/lib/results";
 import { deleteDraft, loadDraft, saveDraft } from "@/lib/progress";
 import { getCrisisPolicy } from "@/lib/crisis";
+import { navigateToView } from "@/lib/navigation";
 import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,9 +15,7 @@ import { AlertTriangle, ArrowLeft, ArrowRight, Check, Copy, Download, Printer, R
 type Answers = Record<number, number>;
 
 export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
-  const storeCode = useAppStore((s) => s.activeTestCode);
-  const code = codeOverride ?? storeCode;
-  const setView = useAppStore((s) => s.setView);
+  const code = codeOverride;
   const setCrisisOpen = useAppStore((s) => s.setCrisisOpen);
   const { toast } = useToast();
 
@@ -50,7 +49,7 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
   if (!def) {
     return (
       <div className="p-6">
-        <Button variant="ghost" onClick={() => setView("tests")}>
+        <Button variant="ghost" onClick={() => navigateToView("tests")}>
           <ArrowLeft className="h-4 w-4" /> К списку тестов
         </Button>
         <p className="mt-4 text-muted-foreground">Тест не найден.</p>
@@ -226,7 +225,7 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
             <RotateCcw className="h-4 w-4" />
             Пройти заново
           </Button>
-          <Button onClick={() => setView("tests")} className="flex-1">
+          <Button onClick={() => navigateToView("tests")} className="flex-1">
             К списку тестов
           </Button>
         </div>
@@ -237,7 +236,7 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div className="flex items-center justify-between gap-2">
-        <Button variant="ghost" size="sm" onClick={() => setView("tests")}>
+        <Button variant="ghost" size="sm" onClick={() => navigateToView("tests")}>
           <ArrowLeft className="h-4 w-4" />
           Выйти
         </Button>

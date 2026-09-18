@@ -1,17 +1,15 @@
 "use client";
 
 import { ALL_TESTS } from "@/data/tests";
-import { useAppStore } from "@/store/app-store";
+import { navigateToView } from "@/lib/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function MethodsView() {
-  const setView = useAppStore((state) => state.setView);
-
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <Button variant="ghost" onClick={() => setView("tests")}>
+      <Button variant="ghost" onClick={() => navigateToView("tests")}>
         <ArrowLeft className="h-4 w-4" /> К каталогу тестов
       </Button>
 

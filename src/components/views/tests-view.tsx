@@ -6,7 +6,7 @@ import {
   type TestDefinition,
 } from "@/data/tests";
 import { loadResultsByCode, severityColor } from "@/lib/results";
-import { useAppStore } from "@/store/app-store";
+import { navigateToTest } from "@/lib/navigation";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,8 +41,6 @@ function Clipboard(props: { className?: string }) {
 }
 
 export function TestsView() {
-  const openTest = useAppStore((s) => s.openTest);
-
   const [lastByCode, setLastByCode] = useState<Map<string, { label: string; severity: string; dateISO: string; score: number; max: number }>>(new Map());
 
   useEffect(() => {
@@ -77,7 +75,7 @@ export function TestsView() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         {ALL_TESTS.map((t) => (
-          <TestCard key={t.code} def={t} onOpen={() => openTest(t.code)} last={lastByCode.get(t.code)} />
+          <TestCard key={t.code} def={t} onOpen={() => navigateToTest(t.code)} last={lastByCode.get(t.code)} />
         ))}
       </div>
     </div>

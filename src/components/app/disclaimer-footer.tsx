@@ -1,12 +1,11 @@
 "use client";
 
-import { useAppStore } from "@/store/app-store";
+import { navigateToView } from "@/lib/navigation";
 
 /**
  * Явный дисклеймер: приложение не диагностирует и не заменяет консультацию специалиста.
  */
 export function DisclaimerFooter() {
-  const setView = useAppStore((state) => state.setView);
   return (
     <footer className="mt-auto border-t bg-muted/30">
       <div className="mx-auto max-w-6xl px-4 py-6">
@@ -21,9 +20,9 @@ export function DisclaimerFooter() {
           <span>© {new Date().getFullYear()} MindTrack · справочник тестов</span>
           <div className="flex flex-wrap items-center gap-3">
             <span>Без регистрации · данные хранятся только в вашем браузере</span>
-            <button type="button" className="underline" onClick={() => setView("methods")}>О методиках и ограничениях</button>
-            <button type="button" className="underline" onClick={() => setView("help")}>Помощь</button>
-            <button type="button" className="underline" onClick={() => setView("privacy")}>Приватность</button>
+            <button type="button" className="underline" onClick={() => navigateToView("methods")}>О методиках и ограничениях</button>
+            <button type="button" className="underline" onClick={() => navigateToView("help")}>Помощь</button>
+            <button type="button" className="underline" onClick={() => navigateToView("privacy")}>Приватность</button>
           </div>
         </div>
       </div>
