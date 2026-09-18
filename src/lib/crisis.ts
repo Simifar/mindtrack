@@ -33,6 +33,13 @@ export interface CrisisDetectionResult {
   matched: string[];
 }
 
+export type CrisisSource = "screening" | "diary" | "visit";
+
+export interface CrisisPolicy extends CrisisDetectionResult {
+  source: CrisisSource;
+  shouldOpenDialog: boolean;
+}
+
 export function detectCrisis(text: string | null | undefined): CrisisDetectionResult {
   if (!text) return { detected: false, matched: [] };
   const matched: string[] = [];
@@ -42,6 +49,12 @@ export function detectCrisis(text: string | null | undefined): CrisisDetectionRe
     }
   }
   return { detected: matched.length > 0, matched };
+}
+
+/** Единая policy-точка для всех форм, которые могут показать кризисный dialog. */
+export function getCrisisPolicy(source: CrisisSource, input: string | boolean | null | undefined): CrisisPolicy {
+  const detection = typeof input === "boolean" ? { detected: input, matched: [] } : detectCrisis(input);
+  return { ...detection, source, shouldOpenDialog: detection.detected };
 }
 
 /** Контакт кризисной поддержки (Российские линии). Меняется под локаль пользователя. */

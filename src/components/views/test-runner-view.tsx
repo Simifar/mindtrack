@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { getOptions, getTest, scoreTest, maxScore, formatResultText, formatScore } from "@/data/tests";
 import { saveResult, severityColor } from "@/lib/results";
 import { deleteDraft, loadDraft, saveDraft } from "@/lib/progress";
+import { getCrisisPolicy } from "@/lib/crisis";
 import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
@@ -92,13 +93,14 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
     }
     deleteDraft(def.code);
     setDone({ result: r, date });
-    if (r.crisisDetected) setCrisisOpen(true);
+    if (getCrisisPolicy("screening", r.crisisDetected).shouldOpenDialog) setCrisisOpen(true);
   }
 
   function selectAnswer(value: number) {
     if (!def) return;
     setAnswers((previous) => ({ ...previous, [current]: value }));
-    if (def.scoring.crisisQuestionIndexes?.includes(current) && value > 0) setCrisisOpen(true);
+    const crisis = getCrisisPolicy("screening", def.scoring.crisisQuestionIndexes?.includes(current) && value > 0);
+    if (crisis.shouldOpenDialog) setCrisisOpen(true);
   }
 
   function exportText(): string {

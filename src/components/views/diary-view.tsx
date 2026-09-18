@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/store/app-store";
-import { detectCrisis } from "@/lib/crisis";
+import { getCrisisPolicy } from "@/lib/crisis";
 import { deleteDiaryEntry, exportDiaryJson, loadDiaryEntries, saveDiaryEntry, type DiaryEntry } from "@/lib/clinical-notes";
 
 type DiaryForm = Omit<DiaryEntry, "id" | "createdAt">;
@@ -86,8 +86,8 @@ export function DiaryView() {
       toast({ title: error instanceof Error ? error.message : "Не удалось сохранить запись", variant: "destructive" });
       return;
     }
-    const crisis = detectCrisis(`${form.warningSigns}\n${form.notes}`);
-    if (crisis.detected) setCrisisOpen(true);
+    const crisis = getCrisisPolicy("diary", `${form.warningSigns}\n${form.notes}`);
+    if (crisis.shouldOpenDialog) setCrisisOpen(true);
   }
 
   function removeEntry(id: string) {
