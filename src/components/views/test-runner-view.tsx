@@ -23,23 +23,28 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
   const [done, setDone] = useState<{ result: ReturnType<typeof scoreTest>; date: Date } | null>(null);
+  const [hydratedCode, setHydratedCode] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!code) return;
     const timer = window.setTimeout(() => {
-      if (!code) return;
       const draft = loadDraft(code);
-      if (!draft) return;
-      setCurrent(draft.current);
-      setAnswers(draft.answers);
+      if (draft) {
+        setCurrent(draft.current);
+        setAnswers(draft.answers);
+      } else {
+        setCurrent(0);
+        setAnswers({});
+      }
+      setHydratedCode(code);
     }, 0);
     return () => window.clearTimeout(timer);
   }, [code]);
 
   useEffect(() => {
-    if (!code || done) return;
-    const timer = window.setTimeout(() => saveDraft({ code, current, answers }), 0);
-    return () => window.clearTimeout(timer);
-  }, [answers, code, current, done]);
+    if (!code || !def || done || hydratedCode !== code) return;
+    saveDraft({ code, current, answers });
+  }, [answers, code, current, def, done, hydratedCode]);
 
   if (!def) {
     return (
