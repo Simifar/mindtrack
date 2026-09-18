@@ -115,8 +115,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Мобильный bottom-nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 border-t bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
-        {NAV.filter((n) => n.id !== "settings").map((item) => {
+      <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-6 border-t bg-card pb-[env(safe-area-inset-bottom)] md:hidden">
+        {NAV.map((item) => {
           const Icon = item.icon;
           const active = view === item.id || (item.id === "tests" && view === "test-runner");
           return (
