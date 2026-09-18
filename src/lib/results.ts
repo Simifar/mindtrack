@@ -1,6 +1,9 @@
 "use client";
 
 import { getTest, maxScore, scoreTest, type ScoreResult } from "@/data/tests";
+import { STORAGE_KEYS } from "@/lib/storage/keys";
+import { readJsonWithLegacy } from "@/lib/storage/migrations";
+import { removeKey, writeJson } from "@/lib/storage/storage";
 
 export interface SavedResult {
   id: string;
@@ -16,8 +19,6 @@ export interface SavedResult {
   answers: Record<number, number>;
 }
 
-const KEY = "mindtrack:results:v2";
-const LEGACY_KEY = "mindtrack:results:v1";
 const MAX_ITEMS = 200;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -56,16 +57,9 @@ function parseResult(value: unknown): SavedResult | null {
 }
 
 function readAll(): SavedResult[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(KEY) ?? localStorage.getItem(LEGACY_KEY);
-    if (!raw) return [];
-    const arr = JSON.parse(raw) as unknown;
-    if (!Array.isArray(arr)) return [];
-    return arr.map(parseResult).filter((item): item is SavedResult => item !== null);
-  } catch {
-    return [];
-  }
+  const value = readJsonWithLegacy<unknown[]>(STORAGE_KEYS.results, STORAGE_KEYS.resultsLegacy);
+  if (!Array.isArray(value)) return [];
+  return value.map(parseResult).filter((item): item is SavedResult => item !== null);
 }
 
 export function loadResults(): SavedResult[] {
@@ -83,7 +77,7 @@ export function saveResult(entry: Omit<SavedResult, "id">): SavedResult {
   };
   const next = [item, ...readAll()].slice(0, MAX_ITEMS);
   try {
-    localStorage.setItem(KEY, JSON.stringify(next));
+    writeJson(STORAGE_KEYS.results, next);
   } catch (error) {
     throw new Error("Не удалось сохранить результат в браузере", { cause: error });
   }
@@ -93,7 +87,7 @@ export function saveResult(entry: Omit<SavedResult, "id">): SavedResult {
 export function deleteResult(id: string): void {
   const next = readAll().filter((r) => r.id !== id);
   try {
-    localStorage.setItem(KEY, JSON.stringify(next));
+    writeJson(STORAGE_KEYS.results, next);
   } catch {
     throw new Error("Не удалось удалить результат из браузера");
   }
@@ -101,8 +95,8 @@ export function deleteResult(id: string): void {
 
 export function clearResults(): void {
   try {
-    localStorage.removeItem(KEY);
-    localStorage.removeItem(LEGACY_KEY);
+    removeKey(STORAGE_KEYS.results);
+    removeKey(STORAGE_KEYS.resultsLegacy);
   } catch {
     throw new Error("Не удалось очистить историю результатов");
   }
@@ -134,7 +128,7 @@ export function importResultsJson(raw: string): { imported: number; skipped: num
   const next = [...byId.values()].sort((a, b) => (a.dateISO < b.dateISO ? 1 : -1)).slice(0, MAX_ITEMS);
 
   try {
-    localStorage.setItem(KEY, JSON.stringify(next));
+    writeJson(STORAGE_KEYS.results, next);
   } catch (error) {
     throw new Error("Не удалось импортировать результаты в браузер", { cause: error });
   }

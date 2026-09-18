@@ -1,6 +1,8 @@
 "use client";
 
 import { getOptions, getTest } from "@/data/tests";
+import { draftKey } from "@/lib/storage/keys";
+import { readJson, removeKey, writeJson } from "@/lib/storage/storage";
 
 export interface TestDraft {
   version: 1;
@@ -8,12 +10,6 @@ export interface TestDraft {
   current: number;
   answers: Record<number, number>;
   updatedAt: string;
-}
-
-const KEY_PREFIX = "mindtrack:draft:v1:";
-
-function getStorage(): Storage | null {
-  return typeof globalThis.window === "undefined" ? null : globalThis.window.localStorage;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -51,32 +47,21 @@ function parseDraft(value: unknown, code: string): TestDraft | null {
 }
 
 export function loadDraft(code: string): TestDraft | null {
-  const storage = getStorage();
-  if (!storage) return null;
-  try {
-    const raw = storage.getItem(KEY_PREFIX + code);
-    return raw ? parseDraft(JSON.parse(raw) as unknown, code) : null;
-  } catch {
-    return null;
-  }
+  return parseDraft(readJson<unknown>(draftKey(code)), code);
 }
 
 export function saveDraft(draft: Omit<TestDraft, "version" | "updatedAt">): void {
-  const storage = getStorage();
-  if (!storage) return;
   const value: TestDraft = { ...draft, version: 1, updatedAt: new Date().toISOString() };
   try {
-    storage.setItem(KEY_PREFIX + draft.code, JSON.stringify(value));
+    writeJson(draftKey(draft.code), value);
   } catch {
     // Черновик не должен блокировать прохождение: результат всё равно сохраняется отдельно.
   }
 }
 
 export function deleteDraft(code: string): void {
-  const storage = getStorage();
-  if (!storage) return;
   try {
-    storage.removeItem(KEY_PREFIX + code);
+    removeKey(draftKey(code));
   } catch {
     // Игнорируем недоступное хранилище: это не мешает пользователю пройти тест.
   }

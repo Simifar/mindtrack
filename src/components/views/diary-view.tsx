@@ -78,11 +78,25 @@ export function DiaryView() {
 
   function save() {
     const entry: DiaryEntry = { ...form, id: `${form.date}-${Date.now()}`, createdAt: new Date().toISOString() };
-    saveDiaryEntry(entry);
-    setEntries(loadDiaryEntries());
-    toast({ title: "Запись сохранена" });
+    try {
+      saveDiaryEntry(entry);
+      setEntries(loadDiaryEntries());
+      toast({ title: "Запись сохранена" });
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : "Не удалось сохранить запись", variant: "destructive" });
+      return;
+    }
     const crisis = detectCrisis(`${form.warningSigns}\n${form.notes}`);
     if (crisis.detected) setCrisisOpen(true);
+  }
+
+  function removeEntry(id: string) {
+    try {
+      deleteDiaryEntry(id);
+      setEntries(loadDiaryEntries());
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : "Не удалось удалить запись", variant: "destructive" });
+    }
   }
 
   function downloadJson() {
@@ -157,7 +171,7 @@ export function DiaryView() {
                 <div key={entry.id} className="rounded-xl border p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="font-medium">{new Date(`${entry.date}T12:00:00`).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}</div>
-                    <Button variant="ghost" size="sm" onClick={() => { deleteDiaryEntry(entry.id); setEntries(loadDiaryEntries()); }}><Trash2 className="h-4 w-4" /> Удалить</Button>
+                    <Button variant="ghost" size="sm" onClick={() => removeEntry(entry.id)}><Trash2 className="h-4 w-4" /> Удалить</Button>
                   </div>
                   <div className="mt-2 grid gap-2 text-sm text-muted-foreground sm:grid-cols-4">
                     <span>Настроение: <b className="text-foreground">{entry.mood}/10</b></span>

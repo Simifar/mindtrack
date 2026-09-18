@@ -51,9 +51,13 @@ export function VisitPrepView() {
   }
 
   function save() {
-    saveVisitPrep(form);
-    setForm(loadVisitPrep());
-    toast({ title: "Сводка сохранена" });
+    try {
+      saveVisitPrep(form);
+      setForm(loadVisitPrep());
+      toast({ title: "Сводка сохранена" });
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : "Не удалось сохранить сводку", variant: "destructive" });
+    }
   }
 
   function download() {
