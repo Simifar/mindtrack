@@ -80,7 +80,7 @@ export function TestRunnerView() {
 
   function downloadTxt() {
     const text = exportText();
-    if (!text || !done) return;
+    if (!text || !def || !done) return;
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -169,4 +169,77 @@ export function TestRunnerView() {
       </div>
     );
   }
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-5">
+      <div className="flex items-center justify-between gap-2">
+        <Button variant="ghost" size="sm" onClick={() => setView("tests")}>
+          <ArrowLeft className="h-4 w-4" />
+          Выйти
+        </Button>
+        <span className="text-sm text-muted-foreground">
+          {current + 1} / {total}
+        </span>
+      </div>
+
+      <Progress value={progress} className="h-1.5" />
+
+      <Card className="py-6">
+        <CardContent className="space-y-5 px-6">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{def.name}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{def.timeframe}</p>
+          </div>
+
+          <p className="text-lg font-semibold leading-relaxed">{def.questions[current]}</p>
+
+          <div role="radiogroup" className="space-y-2" aria-label={def.questions[current]}>
+            {def.options.map((opt) => {
+              const selected = value === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setAnswers((previous) => ({ ...previous, [current]: opt.value }))}
+                  className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition hover:bg-accent ${
+                    selected ? "border-primary bg-primary/5 ring-1 ring-primary/30" : ""
+                  }`}
+                >
+                  <span
+                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                      selected ? "border-primary" : "border-muted-foreground/40"
+                    }`}
+                  >
+                    {selected && <span className="h-2.5 w-2.5 rounded-full bg-primary" />}
+                  </span>
+                  <span className="font-normal">{opt.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="flex items-center justify-between gap-2">
+        <Button variant="outline" onClick={() => setCurrent((index) => Math.max(0, index - 1))} disabled={current === 0}>
+          <ArrowLeft className="h-4 w-4" />
+          Назад
+        </Button>
+        {isLast ? (
+          <Button onClick={finish} disabled={value === undefined}>
+            <Check className="h-4 w-4" />
+            Завершить
+          </Button>
+        ) : (
+          <Button onClick={() => setCurrent((index) => Math.min(total - 1, index + 1))} disabled={value === undefined}>
+            Далее
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
 
