@@ -5,6 +5,7 @@ import { diaryEntrySchema, apiError } from "@/lib/validation";
 import { encrypt, decryptSafe } from "@/lib/crypto";
 import { detectCrisis } from "@/lib/crisis";
 import { withApiHandler } from "@/lib/route-handler";
+import { z } from "zod";
 
 function startOfDayUTC(iso: string): Date {
   // Принимаем YYYY-MM-DD, создаём дату в UTC полдень (избегаем сдвига часового пояса).
@@ -13,18 +14,41 @@ function startOfDayUTC(iso: string): Date {
   return d;
 }
 
+// Query-параметры списка: строгий формат даты, защита от 500 на мусоре.
+const rangeQuerySchema = z.object({
+  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Некорректная дата from. Ожидается YYYY-MM-DD").optional(),
+  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Некорректная дата to. Ожидается YYYY-MM-DD").optional(),
+});
+
 /** GET /api/diary?from=&to= — записи дневника в диапазоне (по умолчанию 30 дней). */
 export const GET = withApiHandler("diary.list", async (req) => {
   const user = await requireUser();
   const url = new URL(req.url);
-  const to = url.searchParams.get("to");
-  const from = url.searchParams.get("from");
+  const rawTo = url.searchParams.get("to");
+  const rawFrom = url.searchParams.get("from");
+
+  // Пустые строки от клиента ("?from=&to=") трактуем как отсутствие параметра.
+  const parsedQuery = rangeQuerySchema.safeParse({
+    ...(rawTo ? { to: rawTo } : {}),
+    ...(rawFrom ? { from: rawFrom } : {}),
+  });
+  if (!parsedQuery.success) {
+    return apiError("Некорректные параметры дат", 400, parsedQuery.error.flatten().fieldErrors);
+  }
+  const { to, from } = parsedQuery.data;
 
   const now = new Date();
-  const toDate = to ? startOfDayUTC(to) : now;
-  const fromDate = from
-    ? startOfDayUTC(from)
-    : new Date(toDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+  let toDate: Date;
+  let fromDate: Date;
+  try {
+    toDate = to ? startOfDayUTC(to) : now;
+    fromDate = from ? startOfDayUTC(from) : new Date(toDate.getTime() - 30 * 24 * 60 * 60 * 1000);
+  } catch {
+    return apiError("Некорректная дата", 400);
+  }
+  if (fromDate > toDate) {
+    return apiError("Дата начала не может быть позже даты окончания", 400);
+  }
 
   const entries = await db.diaryEntry.findMany({
     where: { userId: user.id, date: { gte: fromDate, lte: toDate } },
