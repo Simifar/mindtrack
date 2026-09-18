@@ -1,5 +1,5 @@
 "use client";
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import {
   ALL_TESTS,
   maxScore,
@@ -43,21 +43,26 @@ function Clipboard(props: { className?: string }) {
 export function TestsView() {
   const openTest = useAppStore((s) => s.openTest);
 
-  const lastByCode = useMemo(() => {
-    const map = new Map<string, { label: string; severity: string; dateISO: string; score: number; max: number }>();
-    for (const t of ALL_TESTS) {
-      const last = loadResultsByCode(t.code)[0];
-      if (last) {
-        map.set(t.code, {
-          label: last.label,
-          severity: last.severity,
-          dateISO: last.dateISO,
-          score: last.totalScore,
-          max: last.maxScore,
-        });
+  const [lastByCode, setLastByCode] = useState<Map<string, { label: string; severity: string; dateISO: string; score: number; max: number }>>(new Map());
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const map = new Map<string, { label: string; severity: string; dateISO: string; score: number; max: number }>();
+      for (const t of ALL_TESTS) {
+        const last = loadResultsByCode(t.code)[0];
+        if (last) {
+          map.set(t.code, {
+            label: last.label,
+            severity: last.severity,
+            dateISO: last.dateISO,
+            score: last.totalScore,
+            max: last.maxScore,
+          });
+        }
       }
-    }
-    return map;
+      setLastByCode(map);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   return (

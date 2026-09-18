@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { getTest, scoreTest, maxScore, formatResultText } from "@/data/tests";
+import { getOptions, getTest, scoreTest, maxScore, formatResultText, formatScore } from "@/data/tests";
 import { saveResult, severityColor } from "@/lib/results";
 import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";
@@ -48,20 +48,31 @@ export function TestRunnerView() {
     if (!def) return;
     const r = scoreTest(def, answers);
     const date = new Date();
-    saveResult({
-      code: def.code,
-      testName: def.name,
-      dateISO: date.toISOString(),
-      totalScore: r.totalScore,
-      maxScore: maxScore(def),
-      severity: r.severity,
-      label: r.label,
-      advice: r.advice,
-      crisisDetected: r.crisisDetected,
-      answers: { ...answers },
-    });
+    try {
+      saveResult({
+        code: def.code,
+        testName: def.name,
+        dateISO: date.toISOString(),
+        totalScore: r.totalScore,
+        maxScore: maxScore(def),
+        severity: r.severity,
+        label: r.label,
+        advice: r.advice,
+        crisisDetected: r.crisisDetected,
+        answers: { ...answers },
+      });
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : "Не удалось сохранить результат", variant: "destructive" });
+      return;
+    }
     setDone({ result: r, date });
     if (r.crisisDetected) setCrisisOpen(true);
+  }
+
+  function selectAnswer(value: number) {
+    if (!def) return;
+    setAnswers((previous) => ({ ...previous, [current]: value }));
+    if (def.scoring.crisisQuestionIndexes?.includes(current) && value > 0) setCrisisOpen(true);
   }
 
   function exportText(): string {
@@ -72,10 +83,21 @@ export function TestRunnerView() {
   function copyResult() {
     const text = exportText();
     if (!text) return;
-    navigator.clipboard
-      .writeText(text)
-      .then(() => toast({ title: "Скопировано в буфер обмена" }))
-      .catch(() => toast({ title: "Не удалось скопировать", variant: "destructive" }));
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text)
+        .then(() => toast({ title: "Скопировано в буфер обмена" }))
+        .catch(() => toast({ title: "Не удалось скопировать", variant: "destructive" }));
+      return;
+    }
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    toast(copied ? { title: "Скопировано в буфер обмена" } : { title: "Не удалось скопировать", variant: "destructive" });
   }
 
   function downloadTxt() {
@@ -107,8 +129,12 @@ export function TestRunnerView() {
 
             <div className="flex items-end gap-2">
               <span className="text-5xl font-bold leading-none">{r.totalScore}</span>
-              <span className="pb-1 text-lg text-muted-foreground">/ {maxScore(def)}</span>
+              <span className="pb-1 text-lg text-muted-foreground">{formatScore(def, r).replace(String(r.totalScore), "").trim()}</span>
             </div>
+
+            {r.normalizedScore !== undefined && def.scoring.normalizedScore && (
+              <p className="text-sm text-muted-foreground">Нормированный результат WHO-5: <strong>{r.normalizedScore}</strong> {def.scoring.normalizedScore.label}</p>
+            )}
 
             <div
               className="rounded-xl border p-4"
@@ -130,8 +156,7 @@ export function TestRunnerView() {
                   Ответ требует внимания
                 </div>
                 <p>
-                  Вы отметили мысли о причинении себе вреда. Вы не одни — обратитесь за поддержкой:
-                  8-800-2000-122 (анонимно, круглосуточно).
+                  Вы отметили мысли о причинении себе вреда. Вы не одни — обратитесь за поддержкой прямо сейчас. В непосредственной опасности звоните 112.
                 </p>
                 <Button variant="outline" size="sm" className="self-start" onClick={() => setCrisisOpen(true)}>
                   Показать контакты помощи
@@ -194,7 +219,7 @@ export function TestRunnerView() {
           <p className="text-lg font-semibold leading-relaxed">{def.questions[current]}</p>
 
           <div role="radiogroup" className="space-y-2" aria-label={def.questions[current]}>
-            {def.options.map((opt) => {
+            {getOptions(def, current).map((opt) => {
               const selected = value === opt.value;
               return (
                 <button
@@ -202,7 +227,7 @@ export function TestRunnerView() {
                   type="button"
                   role="radio"
                   aria-checked={selected}
-                  onClick={() => setAnswers((previous) => ({ ...previous, [current]: opt.value }))}
+                  onClick={() => selectAnswer(opt.value)}
                   className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition hover:bg-accent ${
                     selected ? "border-primary bg-primary/5 ring-1 ring-primary/30" : ""
                   }`}

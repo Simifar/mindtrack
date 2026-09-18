@@ -33,9 +33,53 @@ describe("scoreTest (static)", () => {
   it("ASRS: положительный скрининг", () => {
     const def = getTest("ASRS");
     if (!def) throw new Error("no ASRS");
-    const result = scoreTest(def, { 0: 2, 1: 2, 2: 2, 3: 2, 4: 1, 5: 1 });
+    const result = scoreTest(def, { 0: 2, 1: 2, 2: 2, 3: 3, 4: 1, 5: 1 });
     expect(result.totalScore).toBe(4);
     expect(result.severity).toBe("positive");
+  });
+
+  it("ASRS: использует отдельные пороги для первых и последних пунктов", () => {
+    const def = getTest("ASRS");
+    if (!def) throw new Error("no ASRS");
+    const result = scoreTest(def, { 0: 2, 1: 2, 2: 2, 3: 2, 4: 2, 5: 2 });
+    expect(result.totalScore).toBe(3);
+    expect(result.severity).toBe("negative");
+  });
+
+  it("MDQ: положительный результат требует всех трёх условий", () => {
+    const def = getTest("MDQ");
+    if (!def) throw new Error("no MDQ");
+    const positive = scoreTest(def, {
+      0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 0, 13: 1, 14: 2,
+    });
+    expect(positive.totalScore).toBe(8);
+    expect(positive.severity).toBe("positive");
+    const missingCondition = scoreTest(def, {
+      0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 13: 0, 14: 3,
+    });
+    expect(missingCondition.severity).toBe("negative");
+  });
+
+  it("PSS-10: обратно кодирует пункты 4, 5, 7 и 8", () => {
+    const def = getTest("PSS10");
+    if (!def) throw new Error("no PSS10");
+    expect(scoreTest(def, {}).totalScore).toBe(16);
+    expect(scoreTest(def, { 3: 4, 4: 4, 6: 4, 7: 4 }).totalScore).toBe(0);
+  });
+
+  it("ISI: использует разные варианты ответа для пунктов", () => {
+    const def = getTest("ISI");
+    if (!def) throw new Error("no ISI");
+    expect(def.questionOptions?.[3][0].label).toContain("доволен");
+    expect(scoreTest(def, {}).totalScore).toBe(0);
+  });
+
+  it("WHO-5: возвращает сырой и нормированный балл", () => {
+    const def = getTest("WHO5");
+    if (!def) throw new Error("no WHO5");
+    const result = scoreTest(def, { 0: 3, 1: 3, 2: 3, 3: 3, 4: 3 });
+    expect(result.totalScore).toBe(15);
+    expect(result.normalizedScore).toBe(60);
   });
 
   it("maxScore считает максимум", () => {
@@ -53,6 +97,6 @@ describe("scoreTest (static)", () => {
     expect(text).toContain("GAD-7");
     expect(text).toContain(`Балл: ${result.totalScore}`);
     expect(text).toContain("НЕ диагноз");
-    expect(text).toContain("8-800-2000-122");
+    expect(text).toContain("112");
   });
 });

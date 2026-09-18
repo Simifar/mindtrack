@@ -19,10 +19,21 @@ export interface TestBand {
   advice: string;
 }
 
+export interface TestSource {
+  title: string;
+  url: string;
+  version: string;
+  translation: string;
+  licensing: string;
+}
+
 export interface TestScoring {
-  mode: "sum" | "threshold";
+  mode: "sum" | "threshold" | "mdq";
   minValuePerItem?: number;
   minItemsMeetingThreshold?: number;
+  itemThresholds?: number[];
+  displayMaxScore?: number;
+  reverseQuestionIndexes?: number[];
   positiveSeverity?: string;
   positiveLabel?: string;
   positiveAdvice?: string;
@@ -30,6 +41,7 @@ export interface TestScoring {
   negativeLabel?: string;
   negativeAdvice?: string;
   bands?: TestBand[];
+  normalizedScore?: { multiplier: number; max: number; label: string };
   /** Индексы вопросов (0-based) — триггеры кризисного баннера. */
   crisisQuestionIndexes?: number[];
 }
@@ -43,9 +55,12 @@ export interface TestDefinition {
   timeframe: string;
   periodicity: string;
   questions: string[];
+  questionOptions?: TestOption[][];
   options: TestOption[];
+  scoreUnit?: string;
   scoring: TestScoring;
   source: string;
+  sourceInfo: TestSource;
 }
 
 export const FREQUENCY_4 = [
@@ -63,7 +78,7 @@ export const STRESS_5 = [
   { value: 4, label: "Очень часто" },
 ];
 
-export const SLEEP_5 = [
+const ISI_SEVERITY: TestOption[] = [
   { value: 0, label: "Нет" },
   { value: 1, label: "Лёгкая" },
   { value: 2, label: "Умеренная" },
@@ -71,13 +86,45 @@ export const SLEEP_5 = [
   { value: 4, label: "Очень тяжёлая" },
 ];
 
-export const WELLBEING_6 = [
+const ISI_SATISFACTION: TestOption[] = [
+  { value: 0, label: "Очень доволен(на)" },
+  { value: 1, label: "Доволен(на)" },
+  { value: 2, label: "Умеренно доволен(на)" },
+  { value: 3, label: "Не доволен(на)" },
+  { value: 4, label: "Очень не доволен(на)" },
+];
+
+const ISI_NOTICEABLE: TestOption[] = [
+  { value: 0, label: "Совсем не заметна" },
+  { value: 1, label: "Немного" },
+  { value: 2, label: "Умеренно" },
+  { value: 3, label: "Заметно" },
+  { value: 4, label: "Очень заметна" },
+];
+
+const ISI_WORRY: TestOption[] = [
+  { value: 0, label: "Совсем не беспокоит" },
+  { value: 1, label: "Немного" },
+  { value: 2, label: "Умеренно" },
+  { value: 3, label: "Сильно" },
+  { value: 4, label: "Очень сильно" },
+];
+
+const ISI_INTERFERENCE: TestOption[] = [
+  { value: 0, label: "Совсем не мешает" },
+  { value: 1, label: "Немного" },
+  { value: 2, label: "Умеренно" },
+  { value: 3, label: "Сильно" },
+  { value: 4, label: "Очень сильно" },
+];
+
+const WHO5_OPTIONS: TestOption[] = [
   { value: 0, label: "Никогда" },
-  { value: 1, label: "Время от времени" },
-  { value: 2, label: "Меньше половины времени" },
-  { value: 3, label: "Больше половины времени" },
+  { value: 1, label: "Иногда" },
+  { value: 2, label: "Менее половины времени" },
+  { value: 3, label: "Более половины времени" },
   { value: 4, label: "Большую часть времени" },
-  { value: 5, label: "Постоянно" },
+  { value: 5, label: "Всё время" },
 ];
 
 export const TESTS: TestDefinition[] = [
@@ -112,7 +159,14 @@ export const TESTS: TestDefinition[] = [
       ],
       crisisQuestionIndexes: [8],
     },
-    source: "Kroenke K. et al., PHQ-9 (публичная версия)",
+    source: "Kroenke K. et al., PHQ-9",
+    sourceInfo: {
+      title: "PHQ-9 — Kroenke, Spitzer, Williams",
+      url: "https://pubmed.ncbi.nlm.nih.gov/11556941/",
+      version: "9 пунктов; период 2 недели",
+      translation: "Русская формулировка в MindTrack — рабочая адаптация, официальность перевода не заявляется.",
+      licensing: "Перед публичным распространением перевода проверьте условия правообладателя.",
+    },
   },
   {
     code: "GAD7",
@@ -141,7 +195,14 @@ export const TESTS: TestDefinition[] = [
         { max: 21, severity: "severe", label: "Тяжёлая", advice: "Обратитесь к специалисту как можно скорее." },
       ],
     },
-    source: "Spitzer R.L. et al., GAD-7 (публичная версия)",
+    source: "Spitzer R.L. et al., GAD-7",
+    sourceInfo: {
+      title: "GAD-7 — Spitzer, Kroenke, Williams, Löwe",
+      url: "https://pubmed.ncbi.nlm.nih.gov/16717171/",
+      version: "7 пунктов; период 2 недели",
+      translation: "Русская формулировка в MindTrack — рабочая адаптация, официальность перевода не заявляется.",
+      licensing: "Перед публичным распространением перевода проверьте условия правообладателя.",
+    },
   },
 ];
 
@@ -150,35 +211,59 @@ export const TESTS_MDQ: TestDefinition = {
   name: "MDQ — скрининг биполярного спектра",
   short: "Биполярный спектр",
   description:
-    "Скрининг жизненного анамнеза: бывали ли у вас периоды необычных состояний. Положительный скрининг — повод, а не диагноз.",
+    "Скрининг жизненного анамнеза: 13 симптомов, их совпадение по времени и влияние на жизнь. Положительный скрининг — повод, а не диагноз.",
   timeframe: "Бывал ли у вас период, когда вы:",
   periodicity: "раз в 3 месяца",
   questions: [
-    "Чувствовали себя необычно счастливыми или возбуждёнными?",
-    "Были раздражительными, кричали на людей или затевали ссоры?",
-    "Были более самоуверенными, чем обычно?",
-    "Спали меньше обычного и не чувствовали усталости?",
-    "Были более разговорчивыми или говорили быстрее обычного?",
-    "Мысли быстро сменяли друг друга?",
-    "Легко отвлекались, переключаясь с одного на другое?",
-    "Были намного более энергичными и продуктивными?",
+    "Чувствовали себя настолько хорошо или приподнято, что другие думали, что вы не в обычном состоянии?",
+    "Были настолько раздражительны, что кричали на людей или затевали ссоры?",
+    "Чувствовали себя гораздо более уверенным(ой), чем обычно?",
+    "Спали намного меньше обычного и не чувствовали усталости?",
+    "Были намного более разговорчивым(ой) или говорили гораздо быстрее обычного?",
+    "Мысли быстро сменяли друг друга или словно не давали вам сосредоточиться?",
+    "Легко отвлекались на то, что происходило вокруг?",
+    "Были намного более энергичным(ой) и активным(ой), чем обычно?",
+    "Были намного более деятельным(ой) или продуктивным(ой), чем обычно?",
+    "Сильнее интересовались сексом, чем обычно?",
+    "Делали необычные или рискованные вещи, например тратили много денег?",
+    "Чувствовали себя особенно общительным(ой) или открытым(ой)?",
+    "Чувствовали себя творческим(ой) или полным(ой) новых идей?",
+    "Происходили ли несколько из этих состояний в один и тот же период?",
+    "Насколько эти состояния создавали для вас проблемы — на работе, в отношениях, с деньгами или в повседневной жизни?",
   ],
   options: [
     { value: 0, label: "Нет" },
     { value: 1, label: "Да" },
   ],
+  questionOptions: [
+    ...Array.from({ length: 14 }, () => [{ value: 0, label: "Нет" }, { value: 1, label: "Да" }]),
+    [
+      { value: 0, label: "Не создавали проблем" },
+      { value: 1, label: "Небольшие проблемы" },
+      { value: 2, label: "Умеренные проблемы" },
+      { value: 3, label: "Серьёзные проблемы" },
+    ],
+  ],
+  scoreUnit: "симптомов",
   scoring: {
-    mode: "threshold",
-    minValuePerItem: 1,
+    mode: "mdq",
+    displayMaxScore: 13,
     minItemsMeetingThreshold: 7,
     positiveSeverity: "positive",
-    positiveLabel: "Положительный скрининг (7+ «да»)",
-    positiveAdvice: "Обсудите результат с психиатром — нужна очная оценка анамнеза.",
+    positiveLabel: "Положительный скрининг",
+    positiveAdvice: "Выполнены все критерии положительного скрининга MDQ. Обсудите анамнез с психиатром — это не диагноз.",
     negativeSeverity: "negative",
     negativeLabel: "Отрицательный скрининг",
-    negativeAdvice: "Признаков биполярного спектра по MDQ не выявлено.",
+    negativeAdvice: "Критерии положительного скрининга MDQ не выполнены. Это не исключает необходимость обратиться за помощью при сохраняющихся симптомах.",
   },
-  source: "Hirschfeld R.M.W. et al., MDQ (сокращённая версия)",
+  source: "Hirschfeld R.M. et al., Mood Disorder Questionnaire",
+  sourceInfo: {
+    title: "MDQ — оригинальная форма и инструкция",
+    url: "https://psychopharmacology.uic.edu/images/stories/physicians/rating%20scales/MDQ_Instructs%5B1%5D.pdf",
+    version: "13 симптомов + совпадение по времени + влияние на жизнь",
+    translation: "Русская формулировка в MindTrack — рабочая адаптация, официальность перевода не заявляется.",
+    licensing: "Форма защищена авторским правом; перед публикацией проверьте разрешение правообладателя.",
+  },
 };
 
 export const TESTS_WHO5: TestDefinition = {
@@ -194,18 +279,27 @@ export const TESTS_WHO5: TestDefinition = {
     "Я чувствовал(а) себя спокойным(ой) и расслабленным(ой)",
     "Я чувствовал(а) себя активным(ой) и энергичным(ой)",
     "Я просыпался(ась) свежим(ей) и отдохнувшим(ей)",
-    "Повседневная жизнь была наполнена интересными делами",
+    "Моя повседневная жизнь была наполнена интересными для меня делами",
   ],
-  options: WELLBEING_6,
+  options: WHO5_OPTIONS,
+  scoreUnit: "баллов",
   scoring: {
     mode: "sum",
+    normalizedScore: { multiplier: 4, max: 100, label: "из 100" },
     bands: [
-      { max: 12, severity: "severe", label: "Низкое благополучие", advice: "Рекомендуется обсудить состояние со специалистом." },
-      { max: 17, severity: "moderate", label: "Пониженное благополучие", advice: "Следите за динамикой, повторите через 2 недели." },
-      { max: 25, severity: "none", label: "Хорошее благополучие", advice: "Продолжайте наблюдение в обычном режиме." },
+      { max: 12, severity: "severe", label: "Низкое благополучие", advice: "Рекомендуется обсудить состояние со специалистом; сырой балл ниже 13 требует дальнейшей оценки." },
+      { max: 17, severity: "moderate", label: "Пониженное благополучие", advice: "Следите за динамикой и при сохранении трудностей обсудите состояние со специалистом." },
+      { max: 25, severity: "none", label: "Хорошее благополучие", advice: "Продолжайте наблюдение за своим состоянием." },
     ],
   },
-  source: "WHO-5 Well-Being Index (сырой балл 0–25)",
+  source: "WHO-5 Well-Being Index",
+  sourceInfo: {
+    title: "WHO-5 Well-Being Index — официальное руководство WHO",
+    url: "https://www.who.int/publications/m/item/WHO-UCN-MSD-MHE-2024.01",
+    version: "5 пунктов; период 2 недели; сырой балл 0–25, процентный 0–100",
+    translation: "Русская версия в MindTrack не заявляется официальной локализацией WHO.",
+    licensing: "CC BY-NC-SA 3.0; сохраняйте указание авторства и условия лицензии.",
+  },
 };
 
 export const TESTS_ISI: TestDefinition = {
@@ -217,25 +311,34 @@ export const TESTS_ISI: TestDefinition = {
   timeframe: "Оцените тяжесть проблем за последние 2 недели:",
   periodicity: "раз в 2 недели",
   questions: [
-    "Трудности с засыпанием",
-    "Пробуждения ночью, трудности с поддержанием сна",
-    "Слишком ранние пробуждения",
-    "Удовлетворённость режимом сна (0 — доволен, 4 — недоволен)",
-    "Насколько проблемы со сном заметны окружающим",
-    "Насколько вы обеспокоены проблемами со сном",
-    "Насколько сон мешает дневному функционированию",
+    "Насколько серьёзны ваши трудности с засыпанием?",
+    "Насколько серьёзны ваши трудности с поддержанием сна?",
+    "Насколько серьёзна проблема слишком раннего пробуждения?",
+    "Насколько вы удовлетворены или не удовлетворены текущим режимом сна?",
+    "Насколько заметна окружающим ваша проблема со сном в том, что она ухудшает качество вашей жизни?",
+    "Насколько вас беспокоит или расстраивает текущая проблема со сном?",
+    "Насколько текущая проблема со сном мешает вашей повседневной деятельности?",
   ],
-  options: SLEEP_5,
+  options: ISI_SEVERITY,
+  questionOptions: [ISI_SEVERITY, ISI_SEVERITY, ISI_SEVERITY, ISI_SATISFACTION, ISI_NOTICEABLE, ISI_WORRY, ISI_INTERFERENCE],
+  scoreUnit: "баллов",
   scoring: {
     mode: "sum",
     bands: [
       { max: 7, severity: "none", label: "Нет клинически значимой бессонницы", advice: "Продолжайте соблюдать гигиену сна." },
-      { max: 14, severity: "mild", label: "Подпороговая бессонница", advice: "Следите за режимом, повторите через 2 недели." },
-      { max: 21, severity: "moderate", label: "Умеренная бессонница", advice: "Рекомендуется обсудить результат с врачом." },
-      { max: 28, severity: "severe", label: "Тяжёлая бессонница", advice: "Обратитесь к врачу как можно скорее." },
+      { max: 14, severity: "mild", label: "Подпороговая бессонница", advice: "Следите за режимом сна; при сохранении трудностей обсудите их со специалистом." },
+      { max: 21, severity: "moderate", label: "Бессонница средней тяжести", advice: "Рекомендуется обсудить результат с врачом." },
+      { max: 28, severity: "severe", label: "Тяжёлая бессонница", advice: "Обратитесь к врачу, особенно если сон заметно мешает дневной жизни." },
     ],
   },
-  source: "Morin C.M., ISI (публичная версия)",
+  source: "Morin C.M., Insomnia Severity Index",
+  sourceInfo: {
+    title: "ISI — Insomnia Severity Index",
+    url: "https://www.ons.org/sites/default/files/2017-06/InsomniaSeverityIndex_ISI_1.pdf",
+    version: "7 пунктов; период 2 недели; 0–28 баллов",
+    translation: "Русская формулировка в MindTrack — рабочая адаптация, официальность перевода не заявляется.",
+    licensing: "Используется с указанием источника; оригинальная форма может требовать разрешения правообладателя.",
+  },
 };
 
 export const TESTS_PSS10: TestDefinition = {
@@ -248,26 +351,35 @@ export const TESTS_PSS10: TestDefinition = {
   periodicity: "раз в месяц",
   questions: [
     "Расстраивались из-за чего-то неожиданного?",
-    "Чувствовали, что не можете контролировать важные вещи?",
+    "Чувствовали, что не можете контролировать важные вещи в своей жизни?",
     "Чувствовали нервозность и напряжение?",
-    "Чувствовали, что не справляетесь со всеми делами?",
-    "Злились из-за вещей, которые выходили из-под контроля?",
-    "Чувствовали, что трудности накапливаются?",
-    "Не могли справиться с раздражением?",
-    "Чувствовали напряжение из-за дедлайнов?",
-    "Чувствовали усталость от неопределённости?",
-    "Чувствовали, что проблемы растут быстрее решений?",
+    "Чувствовали уверенность в своей способности справляться с личными проблемами?",
+    "Чувствовали, что всё складывается удачно?",
+    "Обнаруживали, что не справляетесь со всеми делами, которые нужно было сделать?",
+    "Чувствовали, что можете справиться с раздражающими трудностями в жизни?",
+    "Чувствовали, что контролируете ситуацию?",
+    "Злились из-за того, что не могли контролировать происходящее?",
+    "Чувствовали, что трудности накапливаются настолько, что вы не можете их преодолеть?",
   ],
   options: STRESS_5,
+  scoreUnit: "баллов",
   scoring: {
     mode: "sum",
+    reverseQuestionIndexes: [3, 4, 6, 7],
     bands: [
       { max: 13, severity: "none", label: "Низкий стресс", advice: "Уровень стресса в пределах нормы." },
       { max: 26, severity: "moderate", label: "Умеренный стресс", advice: "Обратите внимание на отдых и восстановление." },
       { max: 40, severity: "severe", label: "Высокий стресс", advice: "Рекомендуется снизить нагрузку и обсудить состояние со специалистом." },
     ],
   },
-  source: "Cohen S. et al., PSS-10 (публичная версия)",
+  source: "Cohen S. et al., Perceived Stress Scale (PSS-10)",
+  sourceInfo: {
+    title: "PSS-10 — LOINC panel 106875-8",
+    url: "https://loinc.org/106875-8/panel",
+    version: "10 пунктов; период 1 месяц; обратное кодирование 4, 5, 7, 8",
+    translation: "Русская формулировка в MindTrack — рабочая адаптация, официальность перевода не заявляется.",
+    licensing: "Оригинальная шкала и переводы могут требовать разрешения правообладателя; проверьте условия перед публикацией.",
+  },
 };
 
 export const TESTS_ASRS: TestDefinition = {
@@ -279,12 +391,12 @@ export const TESTS_ASRS: TestDefinition = {
   timeframe: "Как часто за последние 6 месяцев у вас было следующее:",
   periodicity: "раз в 3 месяца",
   questions: [
-    "Трудности с завершением мелких деталей проекта",
-    "Трудности с организацией дел и планированием",
-    "Трудности с запоминанием назначений и обязательств",
-    "Откладываете задачи, требующие длительных умственных усилий",
-    "Дёргаетесь или ёрзаете, когда нужно долго сидеть",
-    "Чувствуете чрезмерную активность, как будто «заведённые»",
+    "Как часто вам трудно завершить последние детали дела после того, как основная трудная часть уже сделана?",
+    "Как часто вам трудно организовать дела, когда задача требует порядка и планирования?",
+    "Как часто у вас бывают проблемы с запоминанием встреч или обязательств?",
+    "Когда задача требует много размышлений, как часто вы откладываете её начало или избегаете её?",
+    "Как часто вы ёрзаете руками или ногами, когда нужно долго сидеть?",
+    "Как часто вы чувствуете себя чрезмерно активным(ой), будто вас подталкивает мотор?",
   ],
   options: [
     { value: 0, label: "Никогда" },
@@ -293,18 +405,27 @@ export const TESTS_ASRS: TestDefinition = {
     { value: 3, label: "Часто" },
     { value: 4, label: "Очень часто" },
   ],
+  scoreUnit: "критериев",
   scoring: {
     mode: "threshold",
-    minValuePerItem: 2,
+    itemThresholds: [2, 2, 2, 3, 3, 3],
     minItemsMeetingThreshold: 4,
+    displayMaxScore: 6,
     positiveSeverity: "positive",
-    positiveLabel: "Положительный скрининг (4+ пункта ≥ «Иногда»)",
-    positiveAdvice: "Обсудите результат с психиатром или неврологом.",
+    positiveLabel: "Положительный скрининг (4+ критерия)",
+    positiveAdvice: "Ответы соответствуют порогу скрининга ASRS-v1.1. Обсудите симптомы с психиатром или неврологом — это не диагноз.",
     negativeSeverity: "negative",
     negativeLabel: "Отрицательный скрининг",
-    negativeAdvice: "Признаков СДВГ по ASRS не выявлено.",
+    negativeAdvice: "Порог положительного скрининга ASRS-v1.1 не достигнут. При сохраняющихся трудностях всё равно можно обратиться к специалисту.",
   },
-  source: "Kessler R.C. et al., ASRS-v1.1 Screener (WHO)",
+  source: "Kessler R.C. et al., ASRS-v1.1 Screener",
+  sourceInfo: {
+    title: "ASRS-v1.1 Screener — Harvard NCS",
+    url: "https://www.hcp.med.harvard.edu/ncs/asrs_2025.php",
+    version: "6Q; оригинальный дихотомический алгоритм: 4 из 6",
+    translation: "Русская формулировка в MindTrack — рабочая адаптация, официальность перевода не заявляется.",
+    licensing: "Материалы и переводы предоставляются правообладателем; разрешение на русскую форму нужно проверить отдельно.",
+  },
 };
 
 export function getTest(code: string): TestDefinition | undefined {
@@ -327,6 +448,16 @@ export interface ScoreResult {
   label: string;
   advice: string;
   crisisDetected: boolean;
+  normalizedScore?: number;
+  details?: { symptomCount: number; coOccurred: boolean; impact: number };
+}
+
+export function getOptions(def: TestDefinition, questionIndex: number): TestOption[] {
+  return def.questionOptions?.[questionIndex] ?? def.options;
+}
+
+function scoreValue(def: TestDefinition, questionIndex: number, value: number): number {
+  return def.scoring.reverseQuestionIndexes?.includes(questionIndex) ? 4 - value : value;
 }
 
 /** Чистый подсчёт результата по ответам (индекс вопроса → значение). */
@@ -335,8 +466,8 @@ export function scoreTest(def: TestDefinition, answers: Record<number, number>):
   const crisisDetected = (def.scoring.crisisQuestionIndexes ?? []).some((i) => (values[i] ?? 0) > 0);
 
   if (def.scoring.mode === "threshold") {
-    const minVal = def.scoring.minValuePerItem ?? 1;
-    const count = values.filter((v) => v >= minVal).length;
+    const thresholds = def.scoring.itemThresholds ?? values.map(() => def.scoring.minValuePerItem ?? 1);
+    const count = values.filter((v, index) => v >= (thresholds[index] ?? thresholds[thresholds.length - 1] ?? 1)).length;
     const positive = count >= (def.scoring.minItemsMeetingThreshold ?? 1);
     return {
       totalScore: count,
@@ -347,20 +478,49 @@ export function scoreTest(def: TestDefinition, answers: Record<number, number>):
     };
   }
 
-  const total = values.reduce((s, v) => s + v, 0);
+  if (def.scoring.mode === "mdq") {
+    const symptomCount = values.slice(0, 13).filter((value) => value > 0).length;
+    const coOccurred = values[13] > 0;
+    const impact = values[14] ?? 0;
+    const positive = symptomCount >= (def.scoring.minItemsMeetingThreshold ?? 7) && coOccurred && impact >= 2;
+    return {
+      totalScore: symptomCount,
+      severity: positive ? (def.scoring.positiveSeverity ?? "positive") : (def.scoring.negativeSeverity ?? "negative"),
+      label: positive ? (def.scoring.positiveLabel ?? "Положительный") : (def.scoring.negativeLabel ?? "Отрицательный"),
+      advice: positive ? (def.scoring.positiveAdvice ?? "") : (def.scoring.negativeAdvice ?? ""),
+      crisisDetected,
+      details: { symptomCount, coOccurred, impact },
+    };
+  }
+
+  const total = values.reduce((s, v, index) => s + scoreValue(def, index, v), 0);
   const bands = def.scoring.bands ?? [];
   const band = bands.find((b) => total <= b.max) ?? bands[bands.length - 1] ?? {
     severity: "none",
     label: "—",
     advice: "",
   };
-  return { totalScore: total, severity: band.severity, label: band.label, advice: band.advice, crisisDetected };
+  return {
+    totalScore: total,
+    severity: band.severity,
+    label: band.label,
+    advice: band.advice,
+    crisisDetected,
+    normalizedScore: def.scoring.normalizedScore ? total * def.scoring.normalizedScore.multiplier : undefined,
+  };
 }
 
 /** Максимально возможный балл теста (для подписи «12 / 27»). */
 export function maxScore(def: TestDefinition): number {
+  if (def.scoring.displayMaxScore !== undefined) return def.scoring.displayMaxScore;
   const optMax = Math.max(...def.options.map((o) => o.value));
-  return optMax * def.questions.length;
+  const scoredQuestionCount = def.scoring.mode === "mdq" ? 13 : def.questions.length;
+  return optMax * scoredQuestionCount;
+}
+
+export function formatScore(def: TestDefinition, result: ScoreResult): string {
+  const unit = def.scoreUnit ? ` ${def.scoreUnit}` : "";
+  return `${result.totalScore} из ${maxScore(def)}${unit}`;
 }
 
 /** Текстовый экспорт результата — для отправки врачу / себе. */
@@ -375,16 +535,23 @@ export function formatResultText(opts: {
   lines.push(`MindTrack — результат самонаблюдения (НЕ диагноз)`);
   lines.push(`${def.name}`);
   lines.push(`Дата: ${date.toLocaleString("ru-RU")}`);
-  lines.push(`Балл: ${result.totalScore} / ${maxScore(def)} — ${result.label}`);
+  lines.push(`Балл: ${formatScore(def, result)} — ${result.label}`);
+  if (result.normalizedScore !== undefined && def.scoring.normalizedScore) {
+    lines.push(`Нормированный результат WHO-5: ${result.normalizedScore} ${def.scoring.normalizedScore.label}`);
+  }
+  if (result.details) {
+    lines.push(`Условия MDQ: ${result.details.symptomCount} из 13 симптомов; совпадение по времени — ${result.details.coOccurred ? "да" : "нет"}; влияние — ${result.details.impact}/3.`);
+  }
   if (result.advice) lines.push(`Рекомендация: ${result.advice}`);
   lines.push(``);
   lines.push(`Ответы:`);
   def.questions.forEach((q, i) => {
-    const opt = def.options.find((o) => o.value === answers[i]);
+    const opt = getOptions(def, i).find((o) => o.value === answers[i]);
     lines.push(`${i + 1}. ${q} — ${opt ? `${opt.label} (${opt.value})` : "—"}`);
   });
   lines.push(``);
   lines.push(`Источник шкалы: ${def.source}`);
-  lines.push(`Обсудите результат с врачом или психологом. В кризисе: 8-800-2000-122 (круглосуточно).`);
+  lines.push(`Источник и сведения о версии: ${def.sourceInfo.url}`);
+  lines.push("Это не оценка риска и не диагноз. В непосредственной опасности звоните 112.");
   return lines.join("\n");
 }

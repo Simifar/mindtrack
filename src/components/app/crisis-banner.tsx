@@ -41,9 +41,10 @@ export function CrisisBanner() {
               href={line.href}
               className="flex items-center justify-between rounded-lg border bg-card p-3 transition hover:bg-accent"
             >
-              <div>
+              <div className="min-w-0">
                 <div className="font-medium">{line.name}</div>
-                <div className="text-sm text-muted-foreground">Анонимно · бесплатно</div>
+                <div className="text-sm text-muted-foreground">{line.detail}</div>
+                <div className="mt-1 break-words text-[11px] text-muted-foreground">Источник: {line.source} · проверено {line.checkedAt}</div>
               </div>
               <div className="flex items-center gap-2 font-mono font-semibold text-orange-700 dark:text-orange-300">
                 <Phone className="h-4 w-4" />

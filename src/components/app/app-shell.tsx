@@ -1,5 +1,5 @@
 "use client";
-import { Brain, ClipboardList, History } from "lucide-react";
+import { Brain, ClipboardList, History, Info } from "lucide-react";
 import { useAppStore, type ViewId } from "@/store/app-store";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
@@ -9,6 +9,7 @@ import { DisclaimerFooter } from "./disclaimer-footer";
 const NAV: { id: ViewId; label: string; icon: typeof ClipboardList }[] = [
   { id: "tests", label: "Тесты", icon: ClipboardList },
   { id: "results", label: "Результаты", icon: History },
+  { id: "methods", label: "Методики", icon: Info },
 ];
 
 function Logo() {

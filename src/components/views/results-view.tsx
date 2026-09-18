@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { getTest, formatResultText, scoreTest } from "@/data/tests";
+import { useEffect, useState } from "react";
+import { formatScore, getTest, formatResultText, scoreTest } from "@/data/tests";
 import { loadResults, deleteResult, clearResults, severityColor } from "@/lib/results";
 import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";
@@ -13,8 +13,17 @@ export function ResultsView() {
   const setView = useAppStore((s) => s.setView);
   const setCrisisOpen = useAppStore((s) => s.setCrisisOpen);
   const { toast } = useToast();
-  const [items, setItems] = useState(loadResults);
+  const [items, setItems] = useState<ReturnType<typeof loadResults>>([]);
   const [openId, setOpenId] = useState<string | null>(items[0]?.id ?? null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const next = loadResults();
+      setItems(next);
+      setOpenId(next[0]?.id ?? null);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   function refresh() {
     const next = loadResults();
@@ -23,34 +32,53 @@ export function ResultsView() {
   }
 
   function remove(id: string) {
-    deleteResult(id);
-    refresh();
-    toast({ title: "Результат удалён" });
+    try {
+      deleteResult(id);
+      refresh();
+      toast({ title: "Результат удалён" });
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : "Не удалось удалить результат", variant: "destructive" });
+    }
   }
 
   function clearAll() {
-    clearResults();
-    refresh();
-    toast({ title: "История очищена" });
+    try {
+      clearResults();
+      refresh();
+      toast({ title: "История очищена" });
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : "Не удалось очистить историю", variant: "destructive" });
+    }
   }
 
   const open = items.find((result) => result.id === openId) ?? null;
+  const openDef = open ? getTest(open.code) : undefined;
+  const openScore = open && openDef ? scoreTest(openDef, open.answers) : undefined;
 
   function openText(): string {
     if (!open) return "";
-    const def = getTest(open.code);
-    if (!def) return "";
-    const result = scoreTest(def, open.answers);
-    return formatResultText({ def, answers: open.answers, result, date: new Date(open.dateISO) });
+    if (!openDef || !openScore) return "";
+    return formatResultText({ def: openDef, answers: open.answers, result: openScore, date: new Date(open.dateISO) });
   }
 
   function copyOpen() {
     const text = openText();
     if (!text) return;
-    navigator.clipboard
-      .writeText(text)
-      .then(() => toast({ title: "Скопировано в буфер обмена" }))
-      .catch(() => toast({ title: "Не удалось скопировать", variant: "destructive" }));
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text)
+        .then(() => toast({ title: "Скопировано в буфер обмена" }))
+        .catch(() => toast({ title: "Не удалось скопировать", variant: "destructive" }));
+      return;
+    }
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    toast(copied ? { title: "Скопировано в буфер обмена" } : { title: "Не удалось скопировать", variant: "destructive" });
   }
 
   function downloadOpen() {
@@ -124,11 +152,12 @@ export function ResultsView() {
           <CardHeader>
             <CardTitle className="text-lg">{open.testName}</CardTitle>
             <p className="text-xs text-muted-foreground">
-              {new Date(open.dateISO).toLocaleString("ru-RU")} · {open.totalScore} / {open.maxScore} — {open.label}
+              {new Date(open.dateISO).toLocaleString("ru-RU")} · {openDef && openScore ? formatScore(openDef, openScore) : `${open.totalScore} из ${open.maxScore}`} — {open.label}
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
             {open.advice && <p className="text-sm text-muted-foreground">{open.advice}</p>}
+            {openDef?.code === "WHO5" && openScore && <p className="text-sm text-muted-foreground">Нормированный результат: {openScore.normalizedScore} из 100</p>}
             {open.crisisDetected && (
               <Button variant="outline" size="sm" onClick={() => setCrisisOpen(true)}>
                 Показать контакты помощи

@@ -1,7 +1,7 @@
 "use client";
 import { create } from "zustand";
 
-export type ViewId = "tests" | "test-run" | "results";
+export type ViewId = "tests" | "test-run" | "results" | "methods";
 
 interface AppState {
   view: ViewId;
@@ -21,4 +21,3 @@ export const useAppStore = create<AppState>((set) => ({
   openTest: (code) => set({ activeTestCode: code, view: "test-run" }),
   setCrisisOpen: (v) => set({ crisisOpen: v }),
 }));
-

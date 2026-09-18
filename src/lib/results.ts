@@ -16,16 +16,37 @@ export interface SavedResult {
   answers: Record<number, number>;
 }
 
-const KEY = "mindtrack:results:v1";
+const KEY = "mindtrack:results:v2";
+const LEGACY_KEY = "mindtrack:results:v1";
 const MAX_ITEMS = 200;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseResult(value: unknown): SavedResult | null {
+  if (!isRecord(value)) return null;
+  if (typeof value.id !== "string" || typeof value.code !== "string" || typeof value.testName !== "string") return null;
+  if (typeof value.dateISO !== "string" || Number.isNaN(Date.parse(value.dateISO))) return null;
+  if (typeof value.totalScore !== "number" || typeof value.maxScore !== "number") return null;
+  if (typeof value.severity !== "string" || typeof value.label !== "string" || typeof value.advice !== "string") return null;
+  if (typeof value.crisisDetected !== "boolean" || !isRecord(value.answers)) return null;
+  const answers: Record<number, number> = {};
+  for (const [key, answer] of Object.entries(value.answers)) {
+    if (!/^\d+$/.test(key) || typeof answer !== "number" || !Number.isFinite(answer)) return null;
+    answers[Number(key)] = answer;
+  }
+  return { ...value, answers } as SavedResult;
+}
 
 function readAll(): SavedResult[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(KEY) ?? localStorage.getItem(LEGACY_KEY);
     if (!raw) return [];
-    const arr = JSON.parse(raw) as SavedResult[];
-    return Array.isArray(arr) ? arr : [];
+    const arr = JSON.parse(raw) as unknown;
+    if (!Array.isArray(arr)) return [];
+    return arr.map(parseResult).filter((item): item is SavedResult => item !== null);
   } catch {
     return [];
   }
@@ -47,8 +68,8 @@ export function saveResult(entry: Omit<SavedResult, "id">): SavedResult {
   const next = [item, ...readAll()].slice(0, MAX_ITEMS);
   try {
     localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    /* ignore quota errors */
+  } catch (error) {
+    throw new Error("Не удалось сохранить результат в браузере", { cause: error });
   }
   return item;
 }
@@ -58,15 +79,16 @@ export function deleteResult(id: string): void {
   try {
     localStorage.setItem(KEY, JSON.stringify(next));
   } catch {
-    /* ignore */
+    throw new Error("Не удалось удалить результат из браузера");
   }
 }
 
 export function clearResults(): void {
   try {
     localStorage.removeItem(KEY);
+    localStorage.removeItem(LEGACY_KEY);
   } catch {
-    /* ignore */
+    throw new Error("Не удалось очистить историю результатов");
   }
 }
 
