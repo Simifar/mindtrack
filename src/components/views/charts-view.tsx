@@ -45,6 +45,8 @@ export function ChartsView() {
       sleep: d.sleepHours,
       energy: d.energyLevel,
       crisis: d.crisisDetected,
+      // Scatter в recharts не рисует boolean — маппим кризис в верх шкалы (10).
+      crisisY: d.crisisDetected ? 10 : null,
     }));
   }, [data]);
 
@@ -150,7 +152,7 @@ export function ChartsView() {
                   {crisisPoints.length > 0 && (
                     <Scatter
                       yAxisId="left"
-                      dataKey="crisis"
+                      dataKey="crisisY"
                       data={crisisPoints}
                       name="Кризисные записи"
                       fill="#ef4444"
