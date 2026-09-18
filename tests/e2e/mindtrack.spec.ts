@@ -36,9 +36,13 @@ test.describe("MindTrack critical browser flows", () => {
     for (let index = 0; index < 9; index += 1) {
       await page.getByRole("radio").first().click();
       if (index < 8) {
-        await page.getByRole("button", { name: "Далее", exact: true }).click();
+        const nextButton = page.getByRole("button", { name: "Далее", exact: true });
+        await expect(nextButton).toBeEnabled();
+        await nextButton.click();
       } else {
-        await page.getByRole("button", { name: "Завершить", exact: true }).click();
+        const finishButton = page.getByRole("button", { name: "Завершить", exact: true });
+        await expect(finishButton).toBeEnabled();
+        await finishButton.click();
       }
     }
     await expect(page).toHaveURL(/\/tests\/phq-9\/run\/?$/);
@@ -49,7 +53,7 @@ test.describe("MindTrack critical browser flows", () => {
   test("results import, export and clear confirmation work", async ({ page }) => {
     await gotoPath(page, "/results");
     await page.locator('input[type="file"]').setInputFiles(resultFixture);
-    await expect(page.getByText("Импортировано результатов: 1")).toBeVisible();
+    await expect(page.getByText("Импортировано результатов: 1", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("PHQ-9 — шкала депрессии", { exact: true }).first()).toBeVisible();
 
     const downloadPromise = page.waitForEvent("download");
@@ -75,10 +79,13 @@ test.describe("MindTrack critical browser flows", () => {
     await expect(page.getByRole("paragraph").filter({ hasText: "e2e smoke note" })).toBeVisible();
 
     await gotoPath(page, "/visit");
-    await page.locator("label").filter({ hasText: "Мысли о смерти, самоповреждении или безопасности" }).locator("textarea").fill("есть мысли о смерти");
+    const safetyField = page.locator("label").filter({ hasText: "Мысли о смерти, самоповреждении или безопасности" }).locator("textarea");
+    await safetyField.fill("есть мысли о смерти");
+    await expect(safetyField).toHaveValue("есть мысли о смерти");
     await page.getByRole("button", { name: "Сохранить", exact: true }).click();
+    await expect(page.getByText("Сводка сохранена", { exact: true }).first()).toBeVisible();
     const dialog = page.getByRole("dialog");
-    await expect(dialog).toBeVisible();
+    await expect(dialog).toBeVisible({ timeout: 10_000 });
     await expect(dialog.getByRole("button", { name: "Закрыть", exact: true })).toBeFocused();
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
@@ -117,6 +124,6 @@ test.describe("MindTrack critical browser flows", () => {
     test.skip(!basePath, "base-path smoke is enabled in the CI job");
     await gotoPath(page, "/tests/phq-9");
     await expect(page).toHaveURL(new RegExp(`${basePath.replaceAll("/", "\\/")}\\/tests\\/phq-9\\/?$`));
-    await expect(page.getByRole("heading").first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Начать тест", exact: true })).toBeVisible();
   });
 });
