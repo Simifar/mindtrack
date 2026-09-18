@@ -1,5 +1,15 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {};
+// Для GitHub Pages проект-сайта задаём basePath через переменную окружения
+// (устанавливается в deploy-workflow: PAGES_BASE_PATH=/mindtrack).
+// Локально и на обычном хостинге переменная не задана — basePath отсутствует.
+const basePath = process.env.PAGES_BASE_PATH || "";
+
+const nextConfig: NextConfig = {
+  output: "export",
+  trailingSlash: true,
+  ...(basePath ? { basePath } : {}),
+  images: { unoptimized: true },
+};
 
 export default nextConfig;
