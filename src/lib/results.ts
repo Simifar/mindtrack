@@ -1,6 +1,7 @@
 "use client";
 
 import { getTest, maxScore, scoreTest, type ScoreResult } from "@/data/tests";
+import { validateAnswers } from "@/domain/tests/validation";
 import { STORAGE_KEYS } from "@/lib/storage/keys";
 import { readJsonWithLegacy } from "@/lib/storage/migrations";
 import { removeKey, writeJson } from "@/lib/storage/storage";
@@ -20,6 +21,7 @@ export interface SavedResult {
 }
 
 const MAX_ITEMS = 200;
+const MAX_IMPORT_LENGTH = 1_000_000;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -27,22 +29,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function parseResult(value: unknown): SavedResult | null {
   if (!isRecord(value)) return null;
-  if (typeof value.id !== "string" || typeof value.code !== "string" || typeof value.testName !== "string") return null;
+  if (!value.id || typeof value.id !== "string" || typeof value.code !== "string" || typeof value.testName !== "string") return null;
   if (typeof value.dateISO !== "string" || Number.isNaN(Date.parse(value.dateISO))) return null;
-  if (typeof value.totalScore !== "number" || typeof value.maxScore !== "number") return null;
+  if (typeof value.totalScore !== "number" || !Number.isFinite(value.totalScore) || typeof value.maxScore !== "number" || !Number.isFinite(value.maxScore)) return null;
   if (typeof value.severity !== "string" || typeof value.label !== "string" || typeof value.advice !== "string") return null;
   if (typeof value.crisisDetected !== "boolean" || !isRecord(value.answers)) return null;
-  const answers: Record<number, number> = {};
-  for (const [key, answer] of Object.entries(value.answers)) {
-    if (!/^\d+$/.test(key) || typeof answer !== "number" || !Number.isFinite(answer)) return null;
-    answers[Number(key)] = answer;
-  }
   const def = getTest(value.code);
-  if (!def) return { ...value, answers } as SavedResult;
+  if (!def) return null;
+  const validation = validateAnswers(def, value.answers);
+  if (!validation.valid) return null;
 
   // Пересчитываем сохранённые результаты текущим алгоритмом. Это мигрирует старые
   // записи после исправлений скоринга, не меняя сами ответы пользователя.
-  const score = scoreTest(def, answers);
+  const score = scoreTest(def, validation.answers);
   return {
     ...value,
     testName: def.name,
@@ -52,14 +51,19 @@ function parseResult(value: unknown): SavedResult | null {
     label: score.label,
     advice: score.advice,
     crisisDetected: score.crisisDetected,
-    answers,
+    answers: validation.answers,
   } as SavedResult;
 }
 
 function readAll(): SavedResult[] {
   const value = readJsonWithLegacy<unknown[]>(STORAGE_KEYS.results, STORAGE_KEYS.resultsLegacy);
   if (!Array.isArray(value)) return [];
-  return value.map(parseResult).filter((item): item is SavedResult => item !== null);
+  const seen = new Set<string>();
+  return value.map(parseResult).filter((item): item is SavedResult => {
+    if (!item || seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
 }
 
 export function loadResults(): SavedResult[] {
@@ -71,10 +75,12 @@ export function loadResultsByCode(code: string): SavedResult[] {
 }
 
 export function saveResult(entry: Omit<SavedResult, "id">): SavedResult {
-  const item: SavedResult = {
+  const candidate = {
     ...entry,
     id: `${entry.code}-${entry.dateISO}-${Math.random().toString(36).slice(2, 8)}`,
   };
+  const item = parseResult(candidate);
+  if (!item) throw new Error("Не удалось проверить результат перед сохранением");
   const next = [item, ...readAll()].slice(0, MAX_ITEMS);
   try {
     writeJson(STORAGE_KEYS.results, next);
@@ -111,6 +117,7 @@ export function exportResultsJson(): string {
 }
 
 export function importResultsJson(raw: string): { imported: number; skipped: number } {
+  if (raw.length > MAX_IMPORT_LENGTH) throw new Error("Файл JSON слишком большой");
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw) as unknown;
@@ -121,10 +128,21 @@ export function importResultsJson(raw: string): { imported: number; skipped: num
   const candidates = Array.isArray(parsed) ? parsed : isRecord(parsed) && Array.isArray(parsed.results) ? parsed.results : null;
   if (!candidates) throw new Error("В JSON не найден список результатов");
 
-  const imported = candidates.map(parseResult).filter((item): item is SavedResult => item !== null);
   const existing = readAll();
   const byId = new Map(existing.map((item) => [item.id, item]));
-  for (const item of imported) byId.set(item.id, item);
+  const seenIds = new Set(byId.keys());
+  const imported: SavedResult[] = [];
+  let skipped = 0;
+  for (const candidate of candidates) {
+    const item = parseResult(candidate);
+    if (!item || seenIds.has(item.id)) {
+      skipped += 1;
+      continue;
+    }
+    seenIds.add(item.id);
+    imported.push(item);
+    byId.set(item.id, item);
+  }
   const next = [...byId.values()].sort((a, b) => (a.dateISO < b.dateISO ? 1 : -1)).slice(0, MAX_ITEMS);
 
   try {
@@ -132,7 +150,14 @@ export function importResultsJson(raw: string): { imported: number; skipped: num
   } catch (error) {
     throw new Error("Не удалось импортировать результаты в браузер", { cause: error });
   }
-  return { imported: imported.length, skipped: candidates.length - imported.length };
+  return { imported: imported.length, skipped };
+}
+
+export type ResultCompleteness = "complete" | "incomplete";
+
+export function getResultCompleteness(result: SavedResult): ResultCompleteness {
+  const def = getTest(result.code);
+  return def && validateAnswers(def, result.answers, { requireComplete: true }).valid ? "complete" : "incomplete";
 }
 
 /** Цвет бейджа по severity — через CSS-переменные темы. */
