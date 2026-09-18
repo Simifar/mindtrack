@@ -1,16 +1,15 @@
 "use client";
 
 import { ArrowLeft, Phone } from "lucide-react";
-import { useAppStore } from "@/store/app-store";
+import { navigateToView } from "@/lib/navigation";
 import { CRISIS_RESOURCES } from "@/lib/crisis";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function HelpView() {
-  const setView = useAppStore((state) => state.setView);
   return (
     <div className="mx-auto max-w-2xl space-y-5">
-      <Button variant="ghost" onClick={() => setView("tests")}><ArrowLeft className="h-4 w-4" /> К каталогу тестов</Button>
+      <Button variant="ghost" onClick={() => navigateToView("tests")}><ArrowLeft className="h-4 w-4" /> К каталогу тестов</Button>
       <div><h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Помощь</h1><p className="mt-2 text-sm text-muted-foreground">Если вам тяжело, выберите подходящий ресурс. MindTrack не оценивает непосредственный риск.</p></div>
       <Card>
         <CardHeader><CardTitle className="text-lg">Если опасность непосредственная</CardTitle></CardHeader>

@@ -5,6 +5,8 @@ import { ClipboardPenLine, Download, Printer, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { getCrisisPolicy } from "@/lib/crisis";
+import { useAppStore } from "@/store/app-store";
 import { loadDiaryEntries, loadVisitPrep, saveVisitPrep, exportVisitText, type VisitPrep } from "@/lib/clinical-notes";
 
 const fieldClass = "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-ring";
@@ -39,6 +41,7 @@ function TextField({ label, value, onChange, hint, placeholder, rows = 4 }: { la
 
 export function VisitPrepView() {
   const { toast } = useToast();
+  const setCrisisOpen = useAppStore((state) => state.setCrisisOpen);
   const [form, setForm] = useState<VisitPrep>(emptyForm);
 
   useEffect(() => {
@@ -51,9 +54,15 @@ export function VisitPrepView() {
   }
 
   function save() {
-    saveVisitPrep(form);
-    setForm(loadVisitPrep());
-    toast({ title: "Сводка сохранена" });
+    try {
+      saveVisitPrep(form);
+      setForm(loadVisitPrep());
+      toast({ title: "Сводка сохранена" });
+      const crisis = getCrisisPolicy("visit", form.safety);
+      if (crisis.shouldOpenDialog) setCrisisOpen(true);
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : "Не удалось сохранить сводку", variant: "destructive" });
+    }
   }
 
   function download() {

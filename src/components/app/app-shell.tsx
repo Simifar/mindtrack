@@ -1,6 +1,8 @@
 "use client";
 import { BookHeart, ClipboardList, ClipboardPenLine, History, Info } from "lucide-react";
-import { useAppStore, type ViewId } from "@/store/app-store";
+import { usePathname } from "next/navigation";
+import { navigateToView } from "@/lib/navigation";
+import { routeFromPath, type ViewId } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 import { CrisisBanner } from "./crisis-banner";
@@ -28,10 +30,10 @@ function Logo() {
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const view = useAppStore((s) => s.view);
-  const setView = useAppStore((s) => s.setView);
+  const pathname = usePathname() ?? "/";
+  const route = routeFromPath(pathname);
 
-  const active = (id: ViewId) => view === id || (id === "tests" && (view === "test-detail" || view === "test-run"));
+  const active = (id: ViewId) => route.view === id || (id === "tests" && (route.view === "test-detail" || route.view === "test-run"));
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -46,7 +48,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             return (
               <button
                 key={item.id}
-                onClick={() => setView(item.id)}
+                onClick={() => navigateToView(item.id)}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition",
                   active(item.id)
@@ -90,7 +92,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           return (
             <button
               key={item.id}
-              onClick={() => setView(item.id)}
+                onClick={() => navigateToView(item.id)}
               className={cn(
                 "flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition",
                 active(item.id) ? "text-primary" : "text-muted-foreground"

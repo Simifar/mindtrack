@@ -1,7 +1,10 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { formatScore, getTest, formatResultText, scoreTest } from "@/data/tests";
-import { clearResults, deleteResult, exportResultsJson, importResultsJson, loadResults, severityColor } from "@/lib/results";
+import { clearResults, deleteResult, exportResultsJson, getResultCompleteness, importResultsJson, loadResults, severityColor } from "@/lib/results";
+import { STORAGE_KEYS } from "@/lib/storage/keys";
+import { subscribeStorage } from "@/lib/storage/storage";
+import { navigateToView } from "@/lib/navigation";
 import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,27 +13,26 @@ import { Badge } from "@/components/ui/badge";
 import { Copy, Download, FileJson, Printer, Trash2, Upload } from "lucide-react";
 
 export function ResultsView() {
-  const setView = useAppStore((s) => s.setView);
   const setCrisisOpen = useAppStore((s) => s.setCrisisOpen);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<ReturnType<typeof loadResults>>([]);
   const [openId, setOpenId] = useState<string | null>(items[0]?.id ?? null);
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const next = loadResults();
-      setItems(next);
-      setOpenId(next[0]?.id ?? null);
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, []);
-
-  function refresh() {
+  const refresh = useCallback(() => {
     const next = loadResults();
     setItems(next);
-    if (!openId || !next.some((result) => result.id === openId)) setOpenId(next[0]?.id ?? null);
-  }
+    setOpenId((currentOpenId) => currentOpenId && next.some((result) => result.id === currentOpenId) ? currentOpenId : next[0]?.id ?? null);
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(refresh, 0);
+    const unsubscribe = subscribeStorage(refresh, [STORAGE_KEYS.results, STORAGE_KEYS.resultsLegacy]);
+    return () => {
+      window.clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [refresh]);
 
   function remove(id: string) {
     try {
@@ -43,6 +45,7 @@ export function ResultsView() {
   }
 
   function clearAll() {
+    if (!window.confirm("Удалить всю историю результатов? Это действие нельзя отменить.")) return;
     try {
       clearResults();
       refresh();
@@ -55,6 +58,7 @@ export function ResultsView() {
   const open = items.find((result) => result.id === openId) ?? null;
   const openDef = open ? getTest(open.code) : undefined;
   const openScore = open && openDef ? scoreTest(openDef, open.answers) : undefined;
+  const openCompleteness = open ? getResultCompleteness(open) : undefined;
 
   function openText(): string {
     if (!open) return "";
@@ -132,7 +136,7 @@ export function ResultsView() {
           Вы ещё не проходили тесты. Результаты сохраняются локально в вашем браузере.
         </p>
         <div className="flex flex-wrap justify-center gap-2">
-          <Button onClick={() => setView("tests")}>К каталогу тестов</Button>
+          <Button onClick={() => navigateToView("tests")}>К каталогу тестов</Button>
           <Button variant="outline" onClick={() => fileInputRef.current?.click()}><Upload className="h-4 w-4" /> Импортировать JSON</Button>
         </div>
         <input ref={fileInputRef} type="file" accept="application/json,.json" aria-label="Выберите JSON-файл" className="sr-only" onChange={importJson} />
@@ -172,12 +176,12 @@ export function ResultsView() {
                 {new Date(result.dateISO).toLocaleString("ru-RU")}
               </div>
             </div>
-            <Badge
+              <Badge
               variant="outline"
               className="shrink-0"
               style={{ borderColor: severityColor(result.severity), color: severityColor(result.severity) }}
             >
-              {result.totalScore} / {result.maxScore} · {result.label}
+              {result.totalScore} / {result.maxScore} · {result.label}{getResultCompleteness(result) === "incomplete" ? " · Неполный" : ""}
             </Badge>
           </button>
         ))}
@@ -188,7 +192,7 @@ export function ResultsView() {
           <CardHeader>
             <CardTitle className="text-lg">{open.testName}</CardTitle>
             <p className="text-xs text-muted-foreground">
-              {new Date(open.dateISO).toLocaleString("ru-RU")} · {openDef && openScore ? formatScore(openDef, openScore) : `${open.totalScore} из ${open.maxScore}`} — {open.label}
+              {new Date(open.dateISO).toLocaleString("ru-RU")} · {openDef && openScore ? formatScore(openDef, openScore) : `${open.totalScore} из ${open.maxScore}`} — {open.label}{openCompleteness === "incomplete" ? " · Неполный результат" : ""}
             </p>
           </CardHeader>
           <CardContent className="space-y-4">

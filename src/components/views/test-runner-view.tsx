@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { getOptions, getTest, scoreTest, maxScore, formatResultText, formatScore } from "@/data/tests";
 import { saveResult, severityColor } from "@/lib/results";
 import { deleteDraft, loadDraft, saveDraft } from "@/lib/progress";
+import { getCrisisPolicy } from "@/lib/crisis";
+import { navigateToView } from "@/lib/navigation";
 import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,9 +15,7 @@ import { AlertTriangle, ArrowLeft, ArrowRight, Check, Copy, Download, Printer, R
 type Answers = Record<number, number>;
 
 export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
-  const storeCode = useAppStore((s) => s.activeTestCode);
-  const code = codeOverride ?? storeCode;
-  const setView = useAppStore((s) => s.setView);
+  const code = codeOverride;
   const setCrisisOpen = useAppStore((s) => s.setCrisisOpen);
   const { toast } = useToast();
 
@@ -23,28 +23,33 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
   const [done, setDone] = useState<{ result: ReturnType<typeof scoreTest>; date: Date } | null>(null);
+  const [hydratedCode, setHydratedCode] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!code) return;
     const timer = window.setTimeout(() => {
-      if (!code) return;
       const draft = loadDraft(code);
-      if (!draft) return;
-      setCurrent(draft.current);
-      setAnswers(draft.answers);
+      if (draft) {
+        setCurrent(draft.current);
+        setAnswers(draft.answers);
+      } else {
+        setCurrent(0);
+        setAnswers({});
+      }
+      setHydratedCode(code);
     }, 0);
     return () => window.clearTimeout(timer);
   }, [code]);
 
   useEffect(() => {
-    if (!code || done) return;
-    const timer = window.setTimeout(() => saveDraft({ code, current, answers }), 0);
-    return () => window.clearTimeout(timer);
-  }, [answers, code, current, done]);
+    if (!code || !def || done || hydratedCode !== code) return;
+    saveDraft({ code, current, answers });
+  }, [answers, code, current, def, done, hydratedCode]);
 
   if (!def) {
     return (
       <div className="p-6">
-        <Button variant="ghost" onClick={() => setView("tests")}>
+        <Button variant="ghost" onClick={() => navigateToView("tests")}>
           <ArrowLeft className="h-4 w-4" /> К списку тестов
         </Button>
         <p className="mt-4 text-muted-foreground">Тест не найден.</p>
@@ -87,13 +92,14 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
     }
     deleteDraft(def.code);
     setDone({ result: r, date });
-    if (r.crisisDetected) setCrisisOpen(true);
+    if (getCrisisPolicy("screening", r.crisisDetected).shouldOpenDialog) setCrisisOpen(true);
   }
 
   function selectAnswer(value: number) {
     if (!def) return;
     setAnswers((previous) => ({ ...previous, [current]: value }));
-    if (def.scoring.crisisQuestionIndexes?.includes(current) && value > 0) setCrisisOpen(true);
+    const crisis = getCrisisPolicy("screening", def.scoring.crisisQuestionIndexes?.includes(current) && value > 0);
+    if (crisis.shouldOpenDialog) setCrisisOpen(true);
   }
 
   function exportText(): string {
@@ -153,7 +159,7 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
               <span className="pb-1 text-lg text-muted-foreground">{formatScore(def, r).replace(String(r.totalScore), "").trim()}</span>
             </div>
 
-            {r.normalizedScore !== undefined && def.scoring.normalizedScore && (
+            {r.normalizedScore !== undefined && def.scoring.mode === "sum" && def.scoring.normalizedScore && (
               <p className="text-sm text-muted-foreground">Нормированный результат WHO-5: <strong>{r.normalizedScore}</strong> {def.scoring.normalizedScore.label}</p>
             )}
 
@@ -219,7 +225,7 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
             <RotateCcw className="h-4 w-4" />
             Пройти заново
           </Button>
-          <Button onClick={() => setView("tests")} className="flex-1">
+          <Button onClick={() => navigateToView("tests")} className="flex-1">
             К списку тестов
           </Button>
         </div>
@@ -230,7 +236,7 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <div className="flex items-center justify-between gap-2">
-        <Button variant="ghost" size="sm" onClick={() => setView("tests")}>
+        <Button variant="ghost" size="sm" onClick={() => navigateToView("tests")}>
           <ArrowLeft className="h-4 w-4" />
           Выйти
         </Button>

@@ -1,3 +1,6 @@
+import { STORAGE_KEYS } from "@/lib/storage/keys";
+import { readJson, writeJson } from "@/lib/storage/storage";
+
 export interface DiaryEntry {
   id: string;
   date: string;
@@ -34,9 +37,6 @@ export interface VisitPrep {
   questions: string;
   updatedAt: string;
 }
-
-const DIARY_KEY = "mindtrack.diary.v1";
-const VISIT_KEY = "mindtrack.visit-prep.v1";
 
 const EMPTY_VISIT: VisitPrep = {
   visitDate: "",
@@ -91,21 +91,16 @@ function normalizeDiary(value: unknown): DiaryEntry | null {
 }
 
 export function loadDiaryEntries(): DiaryEntry[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const parsed: unknown = JSON.parse(window.localStorage.getItem(DIARY_KEY) ?? "[]");
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .map(normalizeDiary)
-      .filter((entry): entry is DiaryEntry => Boolean(entry))
-      .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
-  } catch {
-    return [];
-  }
+  const parsed = readJson<unknown[]>(STORAGE_KEYS.diary) ?? [];
+  if (!Array.isArray(parsed)) return [];
+  return parsed
+    .map(normalizeDiary)
+    .filter((entry): entry is DiaryEntry => Boolean(entry))
+    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
 }
 
 function writeDiaryEntries(entries: DiaryEntry[]): void {
-  window.localStorage.setItem(DIARY_KEY, JSON.stringify(entries.slice(0, 365)));
+  writeJson(STORAGE_KEYS.diary, entries.slice(0, 365));
 }
 
 export function saveDiaryEntry(entry: DiaryEntry): void {
@@ -122,18 +117,13 @@ export function exportDiaryJson(): string {
 }
 
 export function loadVisitPrep(): VisitPrep {
-  if (typeof window === "undefined") return { ...EMPTY_VISIT };
-  try {
-    const parsed: unknown = JSON.parse(window.localStorage.getItem(VISIT_KEY) ?? "null");
-    if (!isRecord(parsed)) return { ...EMPTY_VISIT };
-    return { ...EMPTY_VISIT, ...Object.fromEntries(Object.keys(EMPTY_VISIT).map((key) => [key, text(parsed[key])])) } as VisitPrep;
-  } catch {
-    return { ...EMPTY_VISIT };
-  }
+  const parsed = readJson<unknown>(STORAGE_KEYS.visitPrep);
+  if (!isRecord(parsed)) return { ...EMPTY_VISIT };
+  return { ...EMPTY_VISIT, ...Object.fromEntries(Object.keys(EMPTY_VISIT).map((key) => [key, text(parsed[key])])) } as VisitPrep;
 }
 
 export function saveVisitPrep(value: VisitPrep): void {
-  window.localStorage.setItem(VISIT_KEY, JSON.stringify({ ...value, updatedAt: new Date().toISOString() }));
+  writeJson(STORAGE_KEYS.visitPrep, { ...value, updatedAt: new Date().toISOString() });
 }
 
 export function exportVisitText(value: VisitPrep, entries: DiaryEntry[] = []): string {
