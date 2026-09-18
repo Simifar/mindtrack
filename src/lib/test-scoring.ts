@@ -82,7 +82,7 @@ export interface ScoreResult {
   crisisDetected: boolean;
 }
 
-function parseRule(ruleJson: Prisma.JsonValue): ScoringRule {
+function parseRule(ruleJson: Prisma.JsonValue | ScoringRule): ScoringRule {
   if (ruleJson && typeof ruleJson === "object") {
     return ruleJson as unknown as ScoringRule;
   }
@@ -109,7 +109,7 @@ function num(v: number | string): number {
  * @param questions вопросы теста (для порядка и crisis-индексов)
  */
 export function scoreTest(
-  ruleJson: Prisma.JsonValue,
+  ruleJson: Prisma.JsonValue | ScoringRule,
   answers: AnswerValue[],
   questions: TestQuestionData[]
 ): ScoreResult {

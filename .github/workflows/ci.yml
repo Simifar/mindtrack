@@ -7,7 +7,27 @@ on:
     branches: [main]
 
 jobs:
-  lint:
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secrets guard (no .env / *.db / *.pid tracked)
+        run: |
+          forbidden=$(git ls-files | grep -E '(^|/)\.env(\..+)?$|\.db(-journal)?$|\.sqlite3?$|\.pid$' || true)
+          # .env.example — можно, остальное запрещено
+          forbidden=$(echo "$forbidden" | grep -v '^\.env\.example$' || true)
+          if [ -n "$forbidden" ]; then
+            echo "❌ Forbidden files tracked in git:"
+            echo "$forbidden"
+            exit 1
+          fi
+          echo "✅ No secrets or local DBs tracked"
+
+  checks:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,5 +48,14 @@ jobs:
       - name: Generate Prisma client
         run: bunx prisma generate
 
+      - name: Prisma schema valid
+        run: bunx prisma validate
+
       - name: Lint
         run: bun run lint
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Tests
+        run: bun run test
