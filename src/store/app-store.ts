@@ -2,7 +2,7 @@
 import { create } from "zustand";
 import { navigate, pathForView } from "@/lib/routes";
 
-export type ViewId = "tests" | "test-detail" | "test-run" | "results" | "methods" | "help" | "privacy";
+export type ViewId = "tests" | "test-detail" | "test-run" | "diary" | "visit" | "results" | "methods" | "help" | "privacy";
 
 interface AppState {
   view: ViewId;

@@ -44,6 +44,10 @@ export function pathForView(view: ViewId, activeTestCode: string | null): string
       return activeTestCode ? testPath(activeTestCode) : "/tests";
     case "test-run":
       return activeTestCode ? testRunPath(activeTestCode) : "/tests";
+    case "diary":
+      return "/diary";
+    case "visit":
+      return "/visit";
     case "results":
       return "/results";
     case "methods":
@@ -64,6 +68,8 @@ export function routeFromPath(pathname: string): { view: ViewId; code: string | 
     if (code) return { view: "test-detail", code };
   }
   if (parts[0] === "results") return { view: "results", code: null };
+  if (parts[0] === "diary") return { view: "diary", code: null };
+  if (parts[0] === "visit") return { view: "visit", code: null };
   if (parts[0] === "about") return { view: "methods", code: null };
   if (parts[0] === "help") return { view: "help", code: null };
   if (parts[0] === "privacy") return { view: "privacy", code: null };

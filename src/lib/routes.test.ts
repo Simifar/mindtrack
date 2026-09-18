@@ -14,11 +14,15 @@ describe("MindTrack routes", () => {
     expect(routeFromPath("/tests/gad-7/run/")).toEqual({ view: "test-run", code: "GAD7" });
     expect(routeFromPath("/results")).toEqual({ view: "results", code: null });
     expect(routeFromPath("/privacy")).toEqual({ view: "privacy", code: null });
+    expect(routeFromPath("/diary")).toEqual({ view: "diary", code: null });
+    expect(routeFromPath("/visit")).toEqual({ view: "visit", code: null });
   });
 
   it("creates browser paths for view navigation", () => {
     expect(pathForView("test-detail", "ISI")).toBe("/tests/isi");
     expect(pathForView("test-run", "ISI")).toBe("/tests/isi/run");
     expect(pathForView("methods", null)).toBe("/about");
+    expect(pathForView("diary", null)).toBe("/diary");
+    expect(pathForView("visit", null)).toBe("/visit");
   });
 });

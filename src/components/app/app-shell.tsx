@@ -1,5 +1,5 @@
 "use client";
-import { Brain, ClipboardList, History, Info } from "lucide-react";
+import { BookHeart, Brain, ClipboardList, ClipboardPenLine, History, Info } from "lucide-react";
 import { useAppStore, type ViewId } from "@/store/app-store";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
@@ -8,6 +8,8 @@ import { DisclaimerFooter } from "./disclaimer-footer";
 
 const NAV: { id: ViewId; label: string; icon: typeof ClipboardList }[] = [
   { id: "tests", label: "Тесты", icon: ClipboardList },
+  { id: "diary", label: "Дневник", icon: BookHeart },
+  { id: "visit", label: "К врачу", icon: ClipboardPenLine },
   { id: "results", label: "Результаты", icon: History },
   { id: "methods", label: "Методики", icon: Info },
 ];
@@ -83,7 +85,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Мобильный bottom-nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-3 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
         {NAV.map((item) => {
           const Icon = item.icon;
           return (
