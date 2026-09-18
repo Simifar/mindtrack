@@ -18,7 +18,7 @@ function localDate(): string {
 }
 
 const initialForm: DiaryForm = {
-  date: localDate(),
+  date: "",
   mood: 5,
   sleepHours: "",
   sleepQuality: 5,
@@ -65,7 +65,10 @@ export function DiaryView() {
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setEntries(loadDiaryEntries()), 0);
+    const timer = window.setTimeout(() => {
+      setEntries(loadDiaryEntries());
+      setForm((current) => current.date ? current : { ...current, date: localDate() });
+    }, 0);
     return () => window.clearTimeout(timer);
   }, []);
 

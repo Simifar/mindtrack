@@ -9,6 +9,24 @@ import { loadDiaryEntries, loadVisitPrep, saveVisitPrep, exportVisitText, type V
 
 const fieldClass = "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-ring";
 
+const emptyForm: VisitPrep = {
+  visitDate: "",
+  priority: "",
+  changes: "",
+  episodes: "",
+  sleep: "",
+  moodActivity: "",
+  currentMedication: "",
+  previousMedication: "",
+  health: "",
+  familyHistory: "",
+  substances: "",
+  safety: "",
+  other: "",
+  questions: "",
+  updatedAt: "",
+};
+
 function TextField({ label, value, onChange, hint, placeholder, rows = 4 }: { label: string; value: string; onChange: (value: string) => void; hint?: string; placeholder?: string; rows?: number }) {
   return (
     <label className="block space-y-1.5 text-sm">
@@ -21,7 +39,7 @@ function TextField({ label, value, onChange, hint, placeholder, rows = 4 }: { la
 
 export function VisitPrepView() {
   const { toast } = useToast();
-  const [form, setForm] = useState<VisitPrep>(() => loadVisitPrep());
+  const [form, setForm] = useState<VisitPrep>(emptyForm);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setForm(loadVisitPrep()), 0);

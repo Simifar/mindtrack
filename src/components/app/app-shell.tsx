@@ -1,10 +1,11 @@
 "use client";
-import { BookHeart, Brain, ClipboardList, ClipboardPenLine, History, Info } from "lucide-react";
+import { BookHeart, ClipboardList, ClipboardPenLine, History, Info } from "lucide-react";
 import { useAppStore, type ViewId } from "@/store/app-store";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 import { CrisisBanner } from "./crisis-banner";
 import { DisclaimerFooter } from "./disclaimer-footer";
+import { MindTrackMark } from "./mindtrack-logo";
 
 const NAV: { id: ViewId; label: string; icon: typeof ClipboardList }[] = [
   { id: "tests", label: "Тесты", icon: ClipboardList },
@@ -17,9 +18,7 @@ const NAV: { id: ViewId; label: string; icon: typeof ClipboardList }[] = [
 function Logo() {
   return (
     <div className="flex items-center gap-2.5">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-primary-foreground shadow-sm">
-        <Brain className="h-5 w-5" />
-      </div>
+      <MindTrackMark className="h-9 w-9 shrink-0 rounded-xl shadow-sm" />
       <div className="leading-tight">
         <div className="text-sm font-bold tracking-tight">MindTrack</div>
         <div className="text-[10px] text-muted-foreground">справочник тестов</div>

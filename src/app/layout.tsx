@@ -9,6 +9,8 @@ const geistSans = Geist({
   subsets: ["latin", "cyrillic"],
 });
 
+const basePath = process.env.PAGES_BASE_PATH || "";
+
 export const metadata: Metadata = {
   title: "MindTrack — справочник психологических тестов",
   description:
@@ -16,6 +18,19 @@ export const metadata: Metadata = {
   keywords: ["MindTrack", "PHQ-9", "GAD-7", "MDQ", "ASRS", "PSS-10", "ISI", "WHO-5", "психологические тесты"],
   authors: [{ name: "MindTrack" }],
   robots: { index: true, follow: true },
+  manifest: `${basePath}/manifest.webmanifest`,
+  icons: {
+    icon: [
+      { url: `${basePath}/favicon.ico`, sizes: "any" },
+      { url: `${basePath}/icon.svg`, type: "image/svg+xml" },
+    ],
+    apple: [{ url: `${basePath}/apple-touch-icon.png`, sizes: "180x180", type: "image/png" }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "MindTrack",
+    statusBarStyle: "default",
+  },
 };
 
 export default function RootLayout({
