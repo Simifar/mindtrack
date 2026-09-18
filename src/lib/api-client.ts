@@ -116,6 +116,16 @@ export type DashboardDTO = {
   };
 };
 
+export type ShareLinkItem = {
+  shareToken: string;
+  shareUrl: string;
+  expiresAt: string | null;
+  createdAt: string;
+  dateRangeFrom: string;
+  dateRangeTo: string;
+  includedSections: string[];
+};
+
 async function handle<T>(res: Response): Promise<T> {
   if (!res.ok) {
     let msg = `Ошибка ${res.status}`;
@@ -260,6 +270,14 @@ export const api = {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...data, generateShareLink: true }),
       }).then((r) => handle<{ shareUrl: string; shareToken: string; expiresAt: string }>(r)),
+    shares: () =>
+      fetch("/api/export/shares").then((r) => handle<{ items: ShareLinkItem[] }>(r)),
+    revokeShare: (shareToken: string) =>
+      fetch("/api/export/shares/revoke", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shareToken }),
+      }).then((r) => handle<{ ok: true }>(r)),
   },
   account: {
     delete: (password: string) =>

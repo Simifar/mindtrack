@@ -1,13 +1,13 @@
 "use client";
-import { useState } from "react";
-import { api } from "@/lib/api-client";
+import { useEffect, useState } from "react";
+import { api, type ShareLinkItem } from "@/lib/api-client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, FileDown, Link as LinkIcon, Copy, Check } from "lucide-react";
+import { Loader2, FileDown, Link as LinkIcon, Copy, Check, Trash2 } from "lucide-react";
 
 function todayISO(d = new Date()) {
   return d.toISOString().slice(0, 10);
@@ -27,7 +27,16 @@ export function ExportView() {
   const [loading, setLoading] = useState<"pdf" | "link" | null>(null);
   const [shareInfo, setShareInfo] = useState<{ shareUrl: string; expiresAt: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [shares, setShares] = useState<ShareLinkItem[]>([]);
+  const [revoking, setRevoking] = useState<string | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    api.export
+      .shares()
+      .then(({ items }) => setShares(items))
+      .catch(() => {});
+  }, []);
 
   function toggleSection(id: string) {
     setSections((prev) => (prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]));
@@ -71,6 +80,8 @@ export function ExportView() {
     try {
       const res = await api.export.shareLink({ dateFrom, dateTo, sections, shareTtlDays: 7 });
       setShareInfo({ shareUrl: res.shareUrl, expiresAt: res.expiresAt });
+      const { items } = await api.export.shares();
+      setShares(items);
       toast({ title: "Ссылка создана", description: "Действительна 7 дней" });
     } catch (err) {
       toast({
@@ -80,6 +91,23 @@ export function ExportView() {
       });
     } finally {
       setLoading(null);
+    }
+  }
+
+  async function revokeShare(token: string) {
+    setRevoking(token);
+    try {
+      await api.export.revokeShare(token);
+      setShares((prev) => prev.filter((s) => s.shareToken !== token));
+      toast({ title: "Ссылка отозвана", description: "Доступ по ней закрыт" });
+    } catch (err) {
+      toast({
+        title: "Ошибка",
+        description: err instanceof Error ? err.message : "Не удалось",
+        variant: "destructive",
+      });
+    } finally {
+      setRevoking(null);
     }
   }
 
@@ -181,8 +209,50 @@ export function ExportView() {
             </div>
             <p className="text-xs text-emerald-800">
               Ссылка открывается без регистрации. Получатель (врач) увидит read-only отчёт. Вы можете
-              отозвать доступ, удалив аккаунт.
+              отозвать доступ ниже в списке активных ссылок.
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {shares.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Активные ссылки</CardTitle>
+            <CardDescription>Доступ по ссылке можно закрыть в любой момент</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {shares.map((s) => (
+              <div
+                key={s.shareToken}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
+              >
+                <div className="min-w-0">
+                  <div className="truncate font-mono text-xs">
+                    {typeof window !== "undefined" ? window.location.origin : ""}
+                    {s.shareUrl}
+                  </div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {s.dateRangeFrom} → {s.dateRangeTo} · до{" "}
+                    {s.expiresAt ? new Date(s.expiresAt).toLocaleString("ru-RU") : "—"}
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={revoking === s.shareToken}
+                  onClick={() => revokeShare(s.shareToken)}
+                  className="shrink-0"
+                >
+                  {revoking === s.shareToken ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                  Отозвать
+                </Button>
+              </div>
+            ))}
           </CardContent>
         </Card>
       )}
