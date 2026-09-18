@@ -42,13 +42,29 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files — НИКОГДА не коммитить секреты. Только .env.example
 .env
 .env.local
 .env.*.local
+!.env.example
 
 # vercel
 .vercel
+
+# databases — локальные SQLite-файлы, никогда не коммитить
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+db/
+prisma/db/
+prisma/*.db
+
+# runtime / pid / logs
+*.pid
+.zscripts/*.log
+.zscripts/*.pid
+dev.pid
 
 
 # typescript
