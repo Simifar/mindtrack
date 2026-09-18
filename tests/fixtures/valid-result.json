@@ -1,0 +1,29 @@
+{
+  "source": "MindTrack",
+  "version": 2,
+  "results": [
+    {
+      "id": "e2e-phq9-result",
+      "code": "PHQ9",
+      "testName": "PHQ-9 — шкала депрессии",
+      "dateISO": "2026-09-18T10:00:00.000Z",
+      "totalScore": 0,
+      "maxScore": 27,
+      "severity": "none",
+      "label": "Минимальные проявления",
+      "advice": "",
+      "crisisDetected": false,
+      "answers": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 0,
+        "6": 0,
+        "7": 0,
+        "8": 0
+      }
+    }
+  ]
+}

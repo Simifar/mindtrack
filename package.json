@@ -25,7 +25,9 @@
     "start": "bunx serve out -l 3000",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "bun test src",
+    "test:e2e": "playwright test",
+    "check:bundle": "bun scripts/check-bundle-size.ts"
   },
   "dependencies": {
     "@radix-ui/react-progress": "^1.1.7",
@@ -42,6 +44,7 @@
     "zustand": "^5.0.6"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "^4",
     "bun-types": "^1.3.4",
     "eslint": "^9",
