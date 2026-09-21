@@ -102,6 +102,27 @@
   }
 }
 
+@layer components {
+  .app-shell {
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+  }
+
+  .bottom-nav {
+    bottom: calc(0.75rem + env(safe-area-inset-bottom));
+    left: 0.75rem;
+    right: 0.75rem;
+    max-width: 42rem;
+    margin-inline: auto;
+    overflow: hidden;
+    border: 1px solid color-mix(in oklab, var(--border) 78%, transparent);
+    border-radius: 1.75rem;
+    background: color-mix(in oklab, var(--card) 86%, transparent);
+    box-shadow: 0 14px 36px rgb(15 23 42 / 14%), 0 3px 10px rgb(15 23 42 / 8%);
+    backdrop-filter: blur(20px) saturate(150%);
+    -webkit-backdrop-filter: blur(20px) saturate(150%);
+  }
+}
+
 @media print {
   aside,
   header,
@@ -114,6 +135,10 @@
   body {
     background: #fff !important;
     color: #111 !important;
+  }
+
+  .app-shell {
+    padding-bottom: 0 !important;
   }
 
   main {

@@ -97,9 +97,115 @@ test.describe("MindTrack critical browser flows", () => {
     await expect(page.getByRole("heading", { name: "Каталог тестов" })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
     expect(overflow).toBe(false);
-    await page.getByRole("button", { name: "Дневник", exact: true }).last().click();
+    await page.getByRole("link", { name: "Дневник", exact: true }).click();
     await expect(page).toHaveURL(/\/diary\/?$/);
     await expect(page.getByRole("heading", { name: "Дневник состояния" })).toBeVisible();
+  });
+
+  test("floating bottom navigation is accessible and keeps the page content clear", async ({ page }, testInfo) => {
+    const basePath = new URL(testInfo.project.use.baseURL || "http://127.0.0.1/").pathname.replace(/\/$/, "");
+    const viewports = [
+      { width: 320, height: 700 },
+      { width: 390, height: 844 },
+      { width: 1280, height: 900 },
+    ];
+
+    for (const viewport of viewports) {
+      await page.setViewportSize(viewport);
+      await gotoPath(page, "/results");
+
+      const navigation = page.getByRole("navigation", { name: "Основная навигация" });
+      await expect(navigation).toBeVisible();
+      await expect(navigation.locator('[aria-current="page"]')).toHaveText("Результаты");
+
+      const geometry = await navigation.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return {
+          position: style.position,
+          bottom: Number.parseFloat(style.bottom),
+          borderRadius: style.borderRadius,
+          boxShadow: style.boxShadow,
+          backdropFilter: style.backdropFilter,
+          left: rect.left,
+          right: rect.right,
+          width: rect.width,
+          viewportWidth: window.innerWidth,
+        };
+      });
+
+      expect(geometry.position).toBe("fixed");
+      expect(geometry.bottom).toBeGreaterThanOrEqual(12);
+      expect(geometry.borderRadius).not.toBe("0px");
+      expect(geometry.boxShadow).not.toBe("none");
+      expect(geometry.backdropFilter).toContain("blur");
+      expect(geometry.left).toBeGreaterThan(0);
+      expect(geometry.right).toBeLessThan(geometry.viewportWidth);
+      expect(geometry.width).toBeLessThan(geometry.viewportWidth);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+      const tabs = navigation.getByRole("link");
+      await expect(tabs).toHaveCount(5);
+      for (const tab of await tabs.all()) {
+        const tabGeometry = await tab.evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return {
+            height: rect.height,
+            left: rect.left,
+            right: rect.right,
+            navLeft: element.parentElement?.parentElement?.getBoundingClientRect().left ?? 0,
+            navRight: element.parentElement?.parentElement?.getBoundingClientRect().right ?? 0,
+            minHeight: Number.parseFloat(style.minHeight),
+          };
+        });
+        expect(tabGeometry.height).toBeGreaterThanOrEqual(44);
+        expect(tabGeometry.minHeight).toBeGreaterThanOrEqual(44);
+        expect(tabGeometry.left).toBeGreaterThanOrEqual(tabGeometry.navLeft);
+        expect(tabGeometry.right).toBeLessThanOrEqual(tabGeometry.navRight);
+      }
+    }
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const routes = [
+      ["Тесты", "/tests"],
+      ["Дневник", "/diary"],
+      ["К врачу", "/visit"],
+      ["Результаты", "/results"],
+      ["Методики", "/about"],
+    ] as const;
+
+    for (const [label, route] of routes) {
+      await gotoPath(page, "/results");
+      await expect(
+        page.getByRole("navigation", { name: "Основная навигация" }).getByRole("link", { name: label, exact: true }),
+      ).toHaveAttribute("href", `${basePath}${route}`);
+    }
+
+    await gotoPath(page, "/diary");
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    const contentVisibility = await page.evaluate(() => {
+      const navigation = document.querySelector('nav[aria-label="Основная навигация"]');
+      const footer = document.querySelector("footer");
+      if (!navigation || !footer) return null;
+      return {
+        navigationTop: navigation.getBoundingClientRect().top,
+        footerBottom: footer.getBoundingClientRect().bottom,
+      };
+    });
+    expect(contentVisibility).not.toBeNull();
+    expect(contentVisibility?.footerBottom).toBeLessThanOrEqual((contentVisibility?.navigationTop ?? 0) + 1);
+
+    const activeTab = page.getByRole("navigation", { name: "Основная навигация" }).getByRole("link", { name: "Дневник", exact: true });
+    await activeTab.focus();
+    await expect(activeTab).toBeFocused();
+    expect(await activeTab.evaluate((element) => {
+      const style = getComputedStyle(element);
+      return style.outlineStyle !== "none" || style.boxShadow !== "none";
+    })).toBe(true);
+
+    await page.emulateMedia({ media: "print" });
+    await expect(page.getByRole("navigation", { name: "Основная навигация" })).toBeHidden();
   });
 
   test("homepage exposes basic Web Vitals timing", async ({ page }) => {

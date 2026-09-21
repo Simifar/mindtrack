@@ -2,12 +2,14 @@
 import { BookHeart, ClipboardList, ClipboardPenLine, History, Info } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { navigateToView } from "@/lib/navigation";
-import { routeFromPath, type ViewId } from "@/lib/routes";
+import { pathForView, routeFromPath, type ViewId } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "./theme-toggle";
 import { CrisisBanner } from "./crisis-banner";
 import { DisclaimerFooter } from "./disclaimer-footer";
 import { MindTrackMark } from "./mindtrack-logo";
+
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
 const NAV: { id: ViewId; label: string; icon: typeof ClipboardList }[] = [
   { id: "tests", label: "Тесты", icon: ClipboardList },
@@ -36,7 +38,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const active = (id: ViewId) => route.view === id || (id === "tests" && (route.view === "test-detail" || route.view === "test-run"));
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="app-shell flex min-h-screen bg-background">
       {/* Десктоп: левый sidebar */}
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r bg-card/60 backdrop-blur md:flex">
         <div className="px-5 py-5">
@@ -85,24 +87,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <DisclaimerFooter />
       </div>
 
-      {/* Мобильный bottom-nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 grid grid-cols-5 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-        {NAV.map((item) => {
-          const Icon = item.icon;
-          return (
-            <button
-              key={item.id}
-                onClick={() => navigateToView(item.id)}
-              className={cn(
-                "flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition",
-                active(item.id) ? "text-primary" : "text-muted-foreground"
-              )}
-            >
-              <Icon className="h-5 w-5" />
-              {item.label}
-            </button>
-          );
-        })}
+      {/* Основная навигация: плавающая панель доступна на всех размерах экрана. */}
+      <nav aria-label="Основная навигация" className="bottom-nav fixed z-40 backdrop-blur-xl backdrop-saturate-150">
+        <div className="grid grid-cols-5 gap-1 p-1.5">
+          {NAV.map((item) => {
+            const Icon = item.icon;
+            const isActive = active(item.id);
+            return (
+              <a
+                key={item.id}
+                href={`${BASE_PATH}${pathForView(item.id, null)}`}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-[1.25rem] px-1 py-2 text-center text-[0.6875rem] font-medium leading-tight transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:text-xs",
+                  isActive
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                )}
+              >
+                <Icon aria-hidden="true" className="h-5 w-5 shrink-0" />
+                <span className="max-w-full break-words">{item.label}</span>
+              </a>
+            );
+          })}
+        </div>
       </nav>
 
       <CrisisBanner />
