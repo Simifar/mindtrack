@@ -87,8 +87,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <DisclaimerFooter />
       </div>
 
-      {/* Основная навигация: плавающая панель доступна на всех размерах экрана. */}
-      <nav aria-label="Основная навигация" className="bottom-nav fixed z-40 backdrop-blur-xl backdrop-saturate-150">
+      {/* Основная навигация: плавающая панель для мобильных и планшетных экранов. */}
+      <nav aria-label="Основная навигация" className="bottom-nav fixed z-40 backdrop-blur-xl backdrop-saturate-150 md:hidden">
         <div className="grid grid-cols-5 gap-1 p-1.5">
           {NAV.map((item) => {
             const Icon = item.icon;
@@ -99,14 +99,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 href={`${BASE_PATH}${pathForView(item.id, null)}`}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-[1.25rem] px-1 py-2 text-center text-[0.6875rem] font-medium leading-tight transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:text-xs",
+                  "flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-[1.25rem] px-1 py-2 text-center text-[0.625rem] font-medium leading-tight transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:text-xs",
                   isActive
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                 )}
               >
                 <Icon aria-hidden="true" className="h-5 w-5 shrink-0" />
-                <span className="max-w-full break-words">{item.label}</span>
+                <span className="max-w-full whitespace-nowrap">{item.label}</span>
               </a>
             );
           })}

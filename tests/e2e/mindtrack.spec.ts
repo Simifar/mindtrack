@@ -105,9 +105,9 @@ test.describe("MindTrack critical browser flows", () => {
   test("floating bottom navigation is accessible and keeps the page content clear", async ({ page }, testInfo) => {
     const basePath = new URL(testInfo.project.use.baseURL || "http://127.0.0.1/").pathname.replace(/\/$/, "");
     const viewports = [
-      { width: 320, height: 700 },
-      { width: 390, height: 844 },
-      { width: 1280, height: 900 },
+      { width: 320, height: 700, showBottomNavigation: true },
+      { width: 390, height: 844, showBottomNavigation: true },
+      { width: 1280, height: 900, showBottomNavigation: false },
     ];
 
     for (const viewport of viewports) {
@@ -115,7 +115,12 @@ test.describe("MindTrack critical browser flows", () => {
       await gotoPath(page, "/results");
 
       const navigation = page.getByRole("navigation", { name: "Основная навигация" });
-      await expect(navigation).toBeVisible();
+      if (viewport.showBottomNavigation) {
+        await expect(navigation).toBeVisible();
+      } else {
+        await expect(navigation).toBeHidden();
+        continue;
+      }
       await expect(navigation.locator('[aria-current="page"]')).toHaveText("Результаты");
 
       const geometry = await navigation.evaluate((element) => {
@@ -163,6 +168,21 @@ test.describe("MindTrack critical browser flows", () => {
         expect(tabGeometry.minHeight).toBeGreaterThanOrEqual(44);
         expect(tabGeometry.left).toBeGreaterThanOrEqual(tabGeometry.navLeft);
         expect(tabGeometry.right).toBeLessThanOrEqual(tabGeometry.navRight);
+
+        const labelGeometry = await tab.locator("span").evaluate((element) => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          const lineRects = Array.from(range.getClientRects());
+          const labelRect = element.getBoundingClientRect();
+          return {
+            lineCount: lineRects.length,
+            labelWidth: labelRect.width,
+            labelRight: labelRect.right,
+            tabRight: element.parentElement?.getBoundingClientRect().right ?? 0,
+          };
+        });
+        expect(labelGeometry.lineCount).toBe(1);
+        expect(labelGeometry.labelRight).toBeLessThanOrEqual(labelGeometry.tabRight + 1);
       }
     }
 
