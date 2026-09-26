@@ -13,7 +13,7 @@ export function DisclaimerFooter() {
           <p>
             <span className="font-semibold text-foreground">MindTrack — не медицинское ПО.</span>{" "}
             Результаты тестов — самонаблюдение, а не диагноз. Обсуждайте их с врачом /
-            психотерапевтом. В непосредственной опасности: <a href="tel:112" className="font-medium text-foreground underline">112</a>. Детский телефон доверия: <a href="tel:88002000122" className="font-medium text-foreground underline">8-800-2000-122</a>.
+            психотерапевтом. В непосредственной опасности: <a href="tel:112" className="font-medium text-foreground underline">112</a>. Детский телефон доверия в России: <a href="tel:88002000122" className="font-medium text-foreground underline">8-800-2000-122</a> или <a href="tel:124" className="font-medium text-foreground underline">124 с мобильного</a>.
           </p>
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">

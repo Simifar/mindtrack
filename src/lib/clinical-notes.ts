@@ -1,5 +1,5 @@
 import { STORAGE_KEYS } from "@/lib/storage/keys";
-import { readJson, writeJson } from "@/lib/storage/storage";
+import { readJson, removeKey, writeJson } from "@/lib/storage/storage";
 
 export interface DiaryEntry {
   id: string;
@@ -38,6 +38,15 @@ export interface VisitPrep {
   updatedAt: string;
 }
 
+export type DiaryDraft = Omit<DiaryEntry, "id" | "createdAt">;
+export type VisitPrepDraft = Omit<VisitPrep, "updatedAt">;
+
+interface StoredDraft<T> {
+  version: 1;
+  updatedAt: string;
+  value: T;
+}
+
 const EMPTY_VISIT: VisitPrep = {
   visitDate: "",
   priority: "",
@@ -66,6 +75,55 @@ function text(value: unknown): string {
 
 function number(value: unknown, fallback = 0): number {
   return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function isValidDate(value: unknown): value is string {
+  return typeof value === "string" && (value === "" || /^\d{4}-\d{2}-\d{2}$/.test(value));
+}
+
+function normalizeDiaryDraft(value: unknown): DiaryDraft | null {
+  if (!isRecord(value) || !isValidDate(value.date)) return null;
+  const numericFields = ["mood", "sleepQuality", "energy", "anxiety", "irritability"] as const;
+  if (numericFields.some((key) => typeof value[key] !== "number" || !Number.isInteger(value[key]) || number(value[key]) < 0 || number(value[key]) > 10)) return null;
+  const textFields = ["sleepHours", "activity", "medication", "substances", "stressors", "helpful", "warningSigns", "notes"] as const;
+  if (textFields.some((key) => typeof value[key] !== "string")) return null;
+  return {
+    date: value.date,
+    mood: number(value.mood),
+    sleepHours: text(value.sleepHours),
+    sleepQuality: number(value.sleepQuality),
+    energy: number(value.energy),
+    anxiety: number(value.anxiety),
+    irritability: number(value.irritability),
+    activity: text(value.activity),
+    medication: text(value.medication),
+    substances: text(value.substances),
+    stressors: text(value.stressors),
+    helpful: text(value.helpful),
+    warningSigns: text(value.warningSigns),
+    notes: text(value.notes),
+  };
+}
+
+function normalizeVisitPrepDraft(value: unknown): VisitPrepDraft | null {
+  if (!isRecord(value)) return null;
+  const keys: Array<keyof VisitPrepDraft> = [
+    "visitDate", "priority", "changes", "episodes", "sleep", "moodActivity", "currentMedication",
+    "previousMedication", "health", "familyHistory", "substances", "safety", "other", "questions",
+  ];
+  if (keys.some((key) => typeof value[key] !== "string")) return null;
+  return Object.fromEntries(keys.map((key) => [key, text(value[key])])) as VisitPrepDraft;
+}
+
+function readDraft<T>(key: string, normalize: (value: unknown) => T | null): T | null {
+  const parsed = readJson<unknown>(key);
+  if (!isRecord(parsed) || parsed.version !== 1 || typeof parsed.updatedAt !== "string" || Number.isNaN(Date.parse(parsed.updatedAt))) return null;
+  return normalize(parsed.value);
+}
+
+function writeDraft<T>(key: string, value: T): void {
+  const draft: StoredDraft<T> = { version: 1, updatedAt: new Date().toISOString(), value };
+  writeJson(key, draft);
 }
 
 function normalizeDiary(value: unknown): DiaryEntry | null {
@@ -108,6 +166,18 @@ export function saveDiaryEntry(entry: DiaryEntry): void {
   writeDiaryEntries([entry, ...entries]);
 }
 
+export function loadDiaryDraft(): DiaryDraft | null {
+  return readDraft(STORAGE_KEYS.diaryDraft, normalizeDiaryDraft);
+}
+
+export function saveDiaryDraft(value: DiaryDraft): void {
+  writeDraft(STORAGE_KEYS.diaryDraft, value);
+}
+
+export function clearDiaryDraft(): void {
+  removeKey(STORAGE_KEYS.diaryDraft);
+}
+
 export function deleteDiaryEntry(id: string): void {
   writeDiaryEntries(loadDiaryEntries().filter((entry) => entry.id !== id));
 }
@@ -120,6 +190,22 @@ export function loadVisitPrep(): VisitPrep {
   const parsed = readJson<unknown>(STORAGE_KEYS.visitPrep);
   if (!isRecord(parsed)) return { ...EMPTY_VISIT };
   return { ...EMPTY_VISIT, ...Object.fromEntries(Object.keys(EMPTY_VISIT).map((key) => [key, text(parsed[key])])) } as VisitPrep;
+}
+
+export function loadVisitPrepDraft(): VisitPrepDraft | null {
+  return readDraft(STORAGE_KEYS.visitPrepDraft, normalizeVisitPrepDraft);
+}
+
+export function saveVisitPrepDraft(value: VisitPrepDraft): void {
+  writeDraft(STORAGE_KEYS.visitPrepDraft, value);
+}
+
+export function clearVisitPrepDraft(): void {
+  removeKey(STORAGE_KEYS.visitPrepDraft);
+}
+
+export function clearVisitPrep(): void {
+  removeKey(STORAGE_KEYS.visitPrep);
 }
 
 export function saveVisitPrep(value: VisitPrep): void {

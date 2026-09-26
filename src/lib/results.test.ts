@@ -75,7 +75,10 @@ describe.serial("results import validation", () => {
 
     expect(outcome).toEqual({ imported: 1, skipped: 0 });
     expect(getResultCompleteness(imported)).toBe("incomplete");
-    expect(imported.totalScore).toBe(2);
+    expect(imported.totalScore).toBeNull();
+    expect(imported.severity).toBe("context");
+    expect(imported.label).toContain("Неполный результат");
+    expect(imported.advice).toContain("не рассчитываются");
   });
 
   it("skips unknown tests and invalid answer values", () => {

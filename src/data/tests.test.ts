@@ -74,6 +74,15 @@ describe("scoreTest (static)", () => {
     expect(scoreTest(def, { 3: 4, 4: 4, 6: 4, 7: 4 }).totalScore).toBe(0);
   });
 
+  it("PSS-10: не присваивает уровни и не называет балл нормой", () => {
+    const def = getTest("PSS10");
+    if (!def) throw new Error("no PSS10");
+    const result = scoreTest(def, Object.fromEntries(def.questions.map((_, index) => [index, 2])));
+    expect(result.severity).toBe("context");
+    expect(result.label).toContain("универсального порога");
+    expect(result.advice).not.toContain("в пределах нормы");
+  });
+
   it("ISI: использует разные варианты ответа для пунктов", () => {
     const def = getTest("ISI");
     if (!def) throw new Error("no ISI");
@@ -87,6 +96,19 @@ describe("scoreTest (static)", () => {
     const result = scoreTest(def, { 0: 3, 1: 3, 2: 3, 3: 3, 4: 3 });
     expect(result.totalScore).toBe(15);
     expect(result.normalizedScore).toBe(60);
+  });
+
+  it("WHO-5: использует только предложенный WHO порог ниже 13 из 25", () => {
+    const def = getTest("WHO5");
+    if (!def) throw new Error("no WHO5");
+    const below = scoreTest(def, { 0: 2, 1: 2, 2: 2, 3: 3, 4: 3 });
+    const at = scoreTest(def, { 0: 2, 1: 2, 2: 3, 3: 3, 4: 3 });
+    expect(below.totalScore).toBe(12);
+    expect(below.normalizedScore).toBe(48);
+    expect(below.label.toLowerCase()).toContain("ниже предложенного порога");
+    expect(below.advice).toContain("не диагноз");
+    expect(at.totalScore).toBe(13);
+    expect(at.label).toContain("Порог <13 не достигнут");
   });
 
   it("maxScore считает максимум", () => {
@@ -143,5 +165,16 @@ describe("scoreTest (static)", () => {
     expect(text).toContain(`Балл: ${result.totalScore}`);
     expect(text).toContain("НЕ диагноз");
     expect(text).toContain("112");
+  });
+
+  it("formatResultText не интерпретирует неполный набор ответов", () => {
+    const def = getTest("GAD7");
+    if (!def) throw new Error("no GAD7");
+    const answers = { 0: 2 };
+    const text = formatResultText({ def, answers, result: scoreTest(def, answers), date: new Date("2026-09-18T10:00:00") });
+    expect(text).toContain("Неполный результат: 1 из 7 ответов");
+    expect(text).not.toContain("Балл:");
+    expect(text).not.toContain("Рекомендация:");
+    expect(text).not.toContain("Нормированный результат");
   });
 });

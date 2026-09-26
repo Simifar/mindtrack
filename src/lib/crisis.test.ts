@@ -13,6 +13,12 @@ describe("crisis detection policy", () => {
   it("does not trigger on neutral text", () => {
     expect(detectCrisis("Сегодня устал, плохо спал и хочу отдохнуть").detected).toBe(false);
     expect(getCrisisPolicy("diary", "Обсудить качество сна с врачом").shouldOpenDialog).toBe(false);
+    expect(getCrisisPolicy("diary", "В документальном фильме говорили о самоубийстве; хочу обсудить сон").shouldOpenDialog).toBe(false);
+  });
+
+  it("does not treat a broad topic mention as a personal crisis signal", () => {
+    expect(detectCrisis("Психолог предложил обсудить мысли о смерти, если они появятся").detected).toBe(false);
+    expect(getCrisisPolicy("visit", "Мой родственник когда-то говорил, что не хочет жить").shouldOpenDialog).toBe(false);
   });
 
   it("supports screening results that already have a crisis flag", () => {

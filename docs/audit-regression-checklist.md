@@ -81,3 +81,25 @@ Do not start the next stage until the current stage has:
 2. passing applicable automated and browser checks;
 3. a separate commit with a descriptive message;
 4. no newly discovered problem that changes the scope without an explicit decision.
+
+## Audit and improvement pass — 2026-09-26
+
+This entry records a later verification pass. The 2026-09-18 baseline above is historical and is not rewritten.
+
+| Check | Result | Notes |
+| --- | --- | --- |
+| `bun run lint` | PASS | ESLint completed without findings |
+| `bun run typecheck` | PASS | TypeScript completed without errors |
+| `bun run test` | PASS | 45 tests, 137 assertions |
+| `bun run test:e2e -- --workers=1 --retries=0` | PASS | 18 passed, 1 skipped; conditional base-path E2E is skipped without `PAGES_BASE_PATH` |
+| `bun run build` | PASS | Static routes generated successfully with the normal root path |
+| `$env:PAGES_BASE_PATH='/mindtrack'; bun run build` | PASS | Static HTML points to `/mindtrack` routes and `_next` assets |
+| `bun run check:bundle` | PASS | 796.0 KiB total: 744.8 KiB JavaScript and 51.2 KiB CSS |
+| `bun audit` | PASS | No vulnerabilities found after pinning patched transitive dev dependencies |
+| Static output secret-pattern scan | PASS | Targeted scan found no matches for common token, private-key, or database-secret patterns |
+| Codex in-app browser visual review | PASS | Narrow viewport review of catalog, results, diary, appointment prep, help, and privacy; synthetic/empty local data only |
+| `git diff --check` | PASS | No whitespace errors |
+
+Scoring review retained published scoring rules. PSS-10 no longer receives unsupported severity bands, and WHO-5 uses the WHO suggested raw-score threshold without diagnostic categories. Incomplete results remain visible as incomplete and do not display an interpreted score or recommendation. Local drafts, explicit diary inclusion in appointment exports, targeted deletion of MindTrack keys, and the crisis-support flow are covered by unit and browser checks.
+
+This pass is intentionally uncommitted: the task instruction prohibited commits, pushes, and deployment. The base-path check is a production build and output inspection; no public deployment was attempted.

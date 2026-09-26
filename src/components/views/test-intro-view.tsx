@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, Clock3, Play, RotateCcw, Users } from "lucide-react";
+import { ArrowLeft, Clock3, ExternalLink, Play, RotateCcw, Users } from "lucide-react";
 import { getTest } from "@/data/tests";
 import { deleteDraft, loadDraft } from "@/lib/progress";
 import { navigateToTestRun, navigateToView } from "@/lib/navigation";
@@ -55,6 +55,15 @@ export function TestIntroView({ code }: { code: string }) {
           <div className="rounded-lg border p-4 text-sm leading-relaxed text-muted-foreground">
             Ответы сохраняются только в этом браузере. Если закрыть страницу, незавершённое прохождение можно будет продолжить с последнего вопроса.
             {code === "MDQ" && " Для MDQ важны не только 13 симптомов: результат также учитывает, совпадали ли они по времени и насколько влияли на жизнь."}
+          </div>
+          <div className="rounded-2xl bg-muted/55 p-4 text-sm">
+            <p className="font-medium">Источник и версия</p>
+            <a href={def.sourceInfo.url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-primary underline underline-offset-4">
+              {def.sourceInfo.title}<ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
+            </a>
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{def.sourceInfo.version}. {def.sourceInfo.translation}</p>
+            {code === "PSS10" && <p className="mt-2 text-xs leading-relaxed text-muted-foreground">У PSS-10 нет универсальных диагностических порогов: используйте сумму только как наблюдение, не как оценку нормы.</p>}
+            {code === "WHO5" && <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Порог сырого балла ниже 13 предложен WHO для дальнейшей оценки; он не подтверждает и не исключает диагноз.</p>}
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button onClick={start} className="flex-1"><Play className="h-4 w-4" />{hasDraft ? "Продолжить прохождение" : "Начать тест"}</Button>

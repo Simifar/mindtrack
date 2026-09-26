@@ -57,12 +57,12 @@ export function ResultsView() {
 
   const open = items.find((result) => result.id === openId) ?? null;
   const openDef = open ? getTest(open.code) : undefined;
-  const openScore = open && openDef ? scoreTest(openDef, open.answers) : undefined;
   const openCompleteness = open ? getResultCompleteness(open) : undefined;
+  const openScore = open && openDef && openCompleteness === "complete" ? scoreTest(openDef, open.answers) : undefined;
 
   function openText(): string {
     if (!open) return "";
-    if (!openDef || !openScore) return "";
+    if (!openDef) return "";
     return formatResultText({ def: openDef, answers: open.answers, result: openScore, date: new Date(open.dateISO) });
   }
 
@@ -161,11 +161,19 @@ export function ResultsView() {
       <input ref={fileInputRef} type="file" accept="application/json,.json" aria-label="Выберите JSON-файл" className="sr-only" onChange={importJson} />
 
       <div className="no-print space-y-2">
-        {items.map((result) => (
+        {items.map((result) => {
+          const def = getTest(result.code);
+          const completeness = getResultCompleteness(result);
+          const color = completeness === "complete" ? severityColor(result.severity) : "var(--muted-foreground)";
+          const summary = completeness === "complete" && result.totalScore !== null
+            ? `${result.totalScore} / ${result.maxScore} · ${result.label}`
+            : `Неполный результат · ${Object.keys(result.answers).length} из ${def?.questions.length ?? "?"} ответов`;
+          return (
           <button
             key={result.id}
             type="button"
             onClick={() => setOpenId(result.id)}
+            aria-pressed={openId === result.id}
             className={`flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition hover:bg-accent ${
               openId === result.id ? "border-primary bg-primary/5" : ""
             }`}
@@ -178,13 +186,14 @@ export function ResultsView() {
             </div>
               <Badge
               variant="outline"
-              className="shrink-0"
-              style={{ borderColor: severityColor(result.severity), color: severityColor(result.severity) }}
+              className="max-w-[62%] shrink-0 whitespace-normal text-right leading-snug"
+              style={{ borderColor: color, color }}
             >
-              {result.totalScore} / {result.maxScore} · {result.label}{getResultCompleteness(result) === "incomplete" ? " · Неполный" : ""}
+              {summary}
             </Badge>
           </button>
-        ))}
+          );
+        })}
       </div>
 
       {open && (
@@ -192,13 +201,15 @@ export function ResultsView() {
           <CardHeader>
             <CardTitle className="text-lg">{open.testName}</CardTitle>
             <p className="text-xs text-muted-foreground">
-              {new Date(open.dateISO).toLocaleString("ru-RU")} · {openDef && openScore ? formatScore(openDef, openScore) : `${open.totalScore} из ${open.maxScore}`} — {open.label}{openCompleteness === "incomplete" ? " · Неполный результат" : ""}
+              {new Date(open.dateISO).toLocaleString("ru-RU")} · {openDef && openScore && openCompleteness === "complete"
+                ? `${formatScore(openDef, openScore)} — ${openScore.label}`
+                : `Неполный результат · ${Object.keys(open.answers).length} из ${openDef?.questions.length ?? "?"} ответов`}
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            {open.advice && <p className="text-sm text-muted-foreground">{open.advice}</p>}
-            {openDef?.code === "WHO5" && openScore && <p className="text-sm text-muted-foreground">Нормированный результат: {openScore.normalizedScore} из 100</p>}
-            {open.crisisDetected && (
+            {openCompleteness === "complete" && open.advice && <p className="text-sm text-muted-foreground">{open.advice}</p>}
+            {openCompleteness === "complete" && openDef?.code === "WHO5" && openScore && <p className="text-sm text-muted-foreground">Нормированный результат: {openScore.normalizedScore} из 100</p>}
+            {openCompleteness === "complete" && open.crisisDetected && (
               <Button variant="outline" size="sm" onClick={() => setCrisisOpen(true)}>
                 Показать контакты помощи
               </Button>
@@ -221,8 +232,9 @@ export function ResultsView() {
               </Button>
             </div>
             <p className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground">
-              Это результат самонаблюдения, а не медицинский диагноз. Обсудите его с врачом или
-              психотерапевтом.
+              {openCompleteness === "complete"
+                ? "Это результат самонаблюдения, а не медицинский диагноз. Обсудите его с врачом или психотерапевтом."
+                : "Для этой записи недостаточно ответов: балл, категория и рекомендации не рассчитываются. Её можно удалить из истории."}
             </p>
           </CardContent>
         </Card>

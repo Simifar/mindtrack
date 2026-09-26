@@ -1,15 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ClipboardPenLine, Download, Printer, Save } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ClipboardPenLine, Download, Printer, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { getCrisisPolicy } from "@/lib/crisis";
 import { useAppStore } from "@/store/app-store";
-import { loadDiaryEntries, loadVisitPrep, saveVisitPrep, exportVisitText, type VisitPrep } from "@/lib/clinical-notes";
+import { clearVisitPrep, clearVisitPrepDraft, loadDiaryEntries, loadVisitPrep, loadVisitPrepDraft, saveVisitPrep, saveVisitPrepDraft, exportVisitText, type VisitPrep, type VisitPrepDraft } from "@/lib/clinical-notes";
+import { STORAGE_KEYS } from "@/lib/storage/keys";
+import { subscribeStorage } from "@/lib/storage/storage";
 
 const fieldClass = "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-ring";
+
+type DraftStatus = "loading" | "empty" | "pending" | "saved" | "error";
+
+function hasVisitContent(form: VisitPrep): boolean {
+  return Object.entries(form).some(([key, value]) => key !== "visitDate" && key !== "updatedAt" && typeof value === "string" && value.trim().length > 0) || form.visitDate !== "";
+}
+
+function toVisitDraft(form: VisitPrep): VisitPrepDraft {
+  const { updatedAt: _updatedAt, ...draft } = form;
+  return draft;
+}
 
 const emptyForm: VisitPrep = {
   visitDate: "",
@@ -43,30 +56,112 @@ export function VisitPrepView() {
   const { toast } = useToast();
   const setCrisisOpen = useAppStore((state) => state.setCrisisOpen);
   const [form, setForm] = useState<VisitPrep>(emptyForm);
+  const [draftStatus, setDraftStatus] = useState<DraftStatus>("loading");
+  const [hydrated, setHydrated] = useState(false);
+  const [includeDiary, setIncludeDiary] = useState(false);
+  const draftEditedRef = useRef(false);
+  const editedFieldsRef = useRef(new Set<keyof VisitPrep>());
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setForm(loadVisitPrep()), 0);
+    const timer = window.setTimeout(() => {
+      const saved = loadVisitPrep();
+      const draft = loadVisitPrepDraft();
+      const restored = draft ? { ...saved, ...draft } : saved;
+      setForm((current) => editedFieldsRef.current.size === 0
+        ? restored
+        : { ...restored, ...Object.fromEntries(Array.from(editedFieldsRef.current, (key) => [key, current[key]])) } as VisitPrep);
+      setDraftStatus(draftEditedRef.current ? "pending" : draft ? "saved" : "empty");
+      setHydrated(true);
+    }, 0);
     return () => window.clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (!hydrated || !draftEditedRef.current) return;
+    const timer = window.setTimeout(() => {
+      try {
+        if (hasVisitContent(form)) {
+          saveVisitPrepDraft(toVisitDraft(form));
+          setDraftStatus("saved");
+        } else {
+          clearVisitPrepDraft();
+          setDraftStatus("empty");
+        }
+        draftEditedRef.current = false;
+      } catch {
+        setDraftStatus("error");
+      }
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [form, hydrated]);
+
+  useEffect(() => subscribeStorage((event) => {
+    if (draftEditedRef.current) return;
+    if (event.key === STORAGE_KEYS.visitPrepDraft || event.key === STORAGE_KEYS.visitPrep) {
+      const saved = loadVisitPrep();
+      const draft = loadVisitPrepDraft();
+      setForm(draft ? { ...saved, ...draft } : saved);
+      setDraftStatus(draft ? "saved" : "empty");
+    }
+  }, [STORAGE_KEYS.visitPrepDraft, STORAGE_KEYS.visitPrep]), []);
+
   function update<K extends keyof VisitPrep>(key: K, value: VisitPrep[K]) {
+    draftEditedRef.current = true;
+    editedFieldsRef.current.add(key);
+    setDraftStatus("pending");
     setForm((current) => ({ ...current, [key]: value }));
   }
 
   function save() {
     try {
       saveVisitPrep(form);
-      setForm(loadVisitPrep());
-      toast({ title: "Сводка сохранена" });
-      const crisis = getCrisisPolicy("visit", form.safety);
-      if (crisis.shouldOpenDialog) setCrisisOpen(true);
     } catch (error) {
       toast({ title: error instanceof Error ? error.message : "Не удалось сохранить сводку", variant: "destructive" });
+      return;
+    }
+    try {
+      clearVisitPrepDraft();
+    } catch {
+      setDraftStatus("error");
+      toast({ title: "Сводка сохранена, но черновик не удалён", description: "Попробуйте удалить его вручную.", variant: "destructive" });
+      return;
+    }
+    draftEditedRef.current = false;
+    setForm(loadVisitPrep());
+    setDraftStatus("empty");
+    toast({ title: "Сводка сохранена" });
+    const crisis = getCrisisPolicy("visit", form.safety);
+    if (crisis.shouldOpenDialog) setCrisisOpen(true);
+  }
+
+  function discardDraft() {
+    if (!window.confirm("Удалить незаписанный черновик? Сохранённая сводка останется.")) return;
+    try {
+      clearVisitPrepDraft();
+      draftEditedRef.current = false;
+      setForm(loadVisitPrep());
+      setDraftStatus("empty");
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : "Не удалось удалить черновик", variant: "destructive" });
+    }
+  }
+
+  function deleteSavedSummary() {
+    if (!window.confirm("Удалить сохранённую сводку и её черновик?")) return;
+    try {
+      clearVisitPrep();
+      clearVisitPrepDraft();
+      draftEditedRef.current = false;
+      setForm(emptyForm);
+      setDraftStatus("empty");
+      toast({ title: "Сводка удалена" });
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : "Не удалось удалить сводку", variant: "destructive" });
     }
   }
 
   function download() {
-    const text = exportVisitText(form, loadDiaryEntries());
+    const text = exportVisitText(form, includeDiary ? loadDiaryEntries() : []);
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -92,13 +187,16 @@ export function VisitPrepView() {
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="space-y-2 p-4 text-sm text-muted-foreground">
           <p>Заполнять всё необязательно. Можно пропускать вопросы, на которые трудно отвечать или которыми вы пока не готовы делиться. Это рабочая заметка для разговора, не диагноз и не замена анкете специалиста.</p>
-          <p>Если есть записи дневника, они автоматически попадут в скачиваемую сводку — только в виде последних наблюдений, без отправки на сервер.</p>
+          <p>Черновик формы сохраняется в этом браузере. Дневник не добавляется в файл автоматически: выберите эту опцию только если хотите включить последние наблюдения.</p>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader><CardTitle className="text-lg">Основная информация</CardTitle></CardHeader>
         <CardContent className="space-y-4">
+          <p role="status" aria-live="polite" className="text-xs text-muted-foreground">
+            {draftStatus === "loading" ? "Загружаем черновик…" : draftStatus === "pending" ? "Черновик сохраняется…" : draftStatus === "saved" ? "Черновик сохранён" : draftStatus === "error" ? "Не удалось сохранить черновик. Введённый текст пока остаётся в форме." : "Черновика пока нет."}
+          </p>
           <label className="block max-w-xs space-y-1.5 text-sm font-medium"><span>Дата приёма</span><input type="date" className={fieldClass} value={form.visitDate} onChange={(event) => update("visitDate", event.target.value)} /></label>
           <TextField label="Что сейчас беспокоит сильнее всего" value={form.priority} onChange={(value) => update("priority", value)} hint="Коротко: симптомы, трудности, цель обращения и что хочется понять или изменить." />
           <TextField label="Что изменилось и когда" value={form.changes} onChange={(value) => update("changes", value)} placeholder="Когда началось, как менялось, что помогает или ухудшает" />
@@ -128,10 +226,16 @@ export function VisitPrepView() {
         </CardContent>
       </Card>
 
-      <div className="flex flex-wrap gap-2">
+      <label className="flex items-start gap-3 rounded-xl border bg-card p-4 text-sm">
+        <input type="checkbox" checked={includeDiary} onChange={(event) => setIncludeDiary(event.target.checked)} className="mt-0.5 h-4 w-4 accent-primary" />
+        <span><span className="font-medium">Добавить последние записи дневника в файл</span><span className="mt-1 block text-xs text-muted-foreground">В файл попадут дата, краткие шкалы и заметки за последние 14 записей.</span></span>
+      </label>
+      <div className="no-print flex flex-wrap gap-2">
         <Button onClick={save}><Save className="h-4 w-4" /> Сохранить</Button>
+        {draftStatus !== "empty" && draftStatus !== "loading" && <Button variant="outline" onClick={discardDraft}><Trash2 className="h-4 w-4" /> Удалить черновик</Button>}
         <Button variant="outline" onClick={download}><Download className="h-4 w-4" /> Скачать сводку</Button>
         <Button variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4" /> Печать</Button>
+        <Button variant="outline" onClick={deleteSavedSummary}><Trash2 className="h-4 w-4" /> Удалить сводку</Button>
       </div>
       <p className="text-xs text-muted-foreground">Последнее сохранение: {form.updatedAt ? new Date(form.updatedAt).toLocaleString("ru-RU") : "ещё не сохраняли"}. Перед отправкой файла врачу проверьте, нет ли в нём лишних личных данных.</p>
     </div>

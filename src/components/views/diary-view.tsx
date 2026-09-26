@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BookHeart, Download, Printer, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/store/app-store";
 import { getCrisisPolicy } from "@/lib/crisis";
-import { deleteDiaryEntry, exportDiaryJson, loadDiaryEntries, saveDiaryEntry, type DiaryEntry } from "@/lib/clinical-notes";
+import { clearDiaryDraft, deleteDiaryEntry, exportDiaryJson, loadDiaryDraft, loadDiaryEntries, saveDiaryDraft, saveDiaryEntry, type DiaryEntry } from "@/lib/clinical-notes";
+import { STORAGE_KEYS } from "@/lib/storage/keys";
+import { subscribeStorage } from "@/lib/storage/storage";
 
 type DiaryForm = Omit<DiaryEntry, "id" | "createdAt">;
 
@@ -36,6 +38,17 @@ const initialForm: DiaryForm = {
 
 const fieldClass = "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-ring";
 
+type DraftStatus = "loading" | "empty" | "pending" | "saved" | "error";
+
+function hasDiaryContent(form: DiaryForm): boolean {
+  return form.mood !== 5 || form.sleepHours !== "" || form.sleepQuality !== 5 || form.energy !== 5 ||
+    form.anxiety !== 0 || form.irritability !== 0 || [form.activity, form.medication, form.substances, form.stressors, form.helpful, form.warningSigns, form.notes].some((value) => value.trim().length > 0);
+}
+
+function blankForm(): DiaryForm {
+  return { ...initialForm, date: localDate() };
+}
+
 function RangeField({ label, value, onChange, hint }: { label: string; value: number; onChange: (value: number) => void; hint?: string }) {
   return (
     <label className="space-y-1.5 text-sm">
@@ -63,16 +76,62 @@ export function DiaryView() {
   const setCrisisOpen = useAppStore((state) => state.setCrisisOpen);
   const [form, setForm] = useState<DiaryForm>(initialForm);
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
+  const [draftStatus, setDraftStatus] = useState<DraftStatus>("loading");
+  const [hydrated, setHydrated] = useState(false);
+  const draftEditedRef = useRef(false);
+  const editedFieldsRef = useRef(new Set<keyof DiaryForm>());
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setEntries(loadDiaryEntries());
-      setForm((current) => current.date ? current : { ...current, date: localDate() });
+      const draft = loadDiaryDraft();
+      const restored = draft ?? blankForm();
+      setForm((current) => editedFieldsRef.current.size === 0
+        ? restored
+        : { ...restored, ...Object.fromEntries(Array.from(editedFieldsRef.current, (key) => [key, current[key]])) } as DiaryForm);
+      setDraftStatus(draftEditedRef.current ? "pending" : draft ? "saved" : "empty");
+      setHydrated(true);
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (!hydrated || !draftEditedRef.current) return;
+    const timer = window.setTimeout(() => {
+      try {
+        if (hasDiaryContent(form)) {
+          saveDiaryDraft(form);
+          setDraftStatus("saved");
+        } else {
+          clearDiaryDraft();
+          setDraftStatus("empty");
+        }
+        draftEditedRef.current = false;
+      } catch {
+        setDraftStatus("error");
+      }
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [form, hydrated]);
+
+  useEffect(() => subscribeStorage((event) => {
+    if (event.key === STORAGE_KEYS.diary) setEntries(loadDiaryEntries());
+    if (event.key === STORAGE_KEYS.diaryDraft && !draftEditedRef.current) {
+      const draft = loadDiaryDraft();
+      if (draft) {
+        setForm(draft);
+        setDraftStatus("saved");
+      } else if (event.newValue === null) {
+        setForm(blankForm());
+        setDraftStatus("empty");
+      }
+    }
+  }, [STORAGE_KEYS.diary, STORAGE_KEYS.diaryDraft]), []);
+
   function update<K extends keyof DiaryForm>(key: K, value: DiaryForm[K]) {
+    draftEditedRef.current = true;
+    editedFieldsRef.current.add(key);
+    setDraftStatus("pending");
     setForm((current) => ({ ...current, [key]: value }));
   }
 
@@ -81,13 +140,35 @@ export function DiaryView() {
     try {
       saveDiaryEntry(entry);
       setEntries(loadDiaryEntries());
-      toast({ title: "Запись сохранена" });
     } catch (error) {
       toast({ title: error instanceof Error ? error.message : "Не удалось сохранить запись", variant: "destructive" });
       return;
     }
+    try {
+      clearDiaryDraft();
+    } catch {
+      setDraftStatus("error");
+      toast({ title: "Запись сохранена, но черновик не удалён", description: "Попробуйте удалить его вручную.", variant: "destructive" });
+      return;
+    }
+    draftEditedRef.current = false;
+    setForm(blankForm());
+    setDraftStatus("empty");
+    toast({ title: "Запись сохранена" });
     const crisis = getCrisisPolicy("diary", `${form.warningSigns}\n${form.notes}`);
     if (crisis.shouldOpenDialog) setCrisisOpen(true);
+  }
+
+  function discardDraft() {
+    if (!window.confirm("Удалить незаписанный черновик дневника? Сохранённые записи останутся.")) return;
+    try {
+      clearDiaryDraft();
+      draftEditedRef.current = false;
+      setForm(blankForm());
+      setDraftStatus("empty");
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : "Не удалось удалить черновик", variant: "destructive" });
+    }
   }
 
   function removeEntry(id: string) {
@@ -124,13 +205,16 @@ export function DiaryView() {
 
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="p-4 text-sm text-muted-foreground">
-          Заполняйте один раз в день, ориентируясь на день в целом. Шкалы 0–10 — только способ заметить динамику, не диагноз и не оценка «правильности» состояния. Данные хранятся только в этом браузере.
+          Шкалы 0–10 — способ заметить изменения, а не диагноз и не оценка «правильности» состояния. Незаписанный текст сохраняется в этом браузере; отдельную запись создаёт кнопка ниже.
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader><CardTitle className="text-lg">Запись за день</CardTitle></CardHeader>
         <CardContent className="space-y-5">
+          <p role="status" aria-live="polite" className="text-xs text-muted-foreground">
+            {draftStatus === "loading" ? "Загружаем черновик…" : draftStatus === "pending" ? "Черновик сохраняется…" : draftStatus === "saved" ? "Черновик сохранён" : draftStatus === "error" ? "Не удалось сохранить черновик. Введённый текст пока остаётся в форме." : "Черновика пока нет."}
+          </p>
           <label className="block max-w-xs space-y-1.5 text-sm font-medium">
             <span>Дата</span>
             <input type="date" className={fieldClass} value={form.date} onChange={(event) => update("date", event.target.value)} />
@@ -154,8 +238,9 @@ export function DiaryView() {
             <TextField label="Ранние признаки или важные изменения" value={form.warningSigns} onChange={(value) => update("warningSigns", value)} placeholder="Что отличается от обычного состояния" />
           </div>
           <TextField label="Комментарий" value={form.notes} onChange={(value) => update("notes", value)} placeholder="Дополнительные детали для обсуждения с врачом" />
-          <div className="flex flex-wrap gap-2">
+          <div className="no-print flex flex-wrap gap-2">
             <Button onClick={save}><Save className="h-4 w-4" /> Сохранить запись</Button>
+            {draftStatus !== "empty" && draftStatus !== "loading" && <Button variant="outline" onClick={discardDraft}><Trash2 className="h-4 w-4" /> Удалить черновик</Button>}
             <Button variant="outline" onClick={downloadJson}><Download className="h-4 w-4" /> Экспорт JSON</Button>
             <Button variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4" /> Печать</Button>
           </div>

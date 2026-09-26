@@ -11,7 +11,7 @@ export interface SavedResult {
   code: string;
   testName: string;
   dateISO: string;
-  totalScore: number;
+  totalScore: number | null;
   maxScore: number;
   severity: string;
   label: string;
@@ -31,7 +31,7 @@ function parseResult(value: unknown): SavedResult | null {
   if (!isRecord(value)) return null;
   if (!value.id || typeof value.id !== "string" || typeof value.code !== "string" || typeof value.testName !== "string") return null;
   if (typeof value.dateISO !== "string" || Number.isNaN(Date.parse(value.dateISO))) return null;
-  if (typeof value.totalScore !== "number" || !Number.isFinite(value.totalScore) || typeof value.maxScore !== "number" || !Number.isFinite(value.maxScore)) return null;
+  if ((value.totalScore !== null && (typeof value.totalScore !== "number" || !Number.isFinite(value.totalScore))) || typeof value.maxScore !== "number" || !Number.isFinite(value.maxScore)) return null;
   if (typeof value.severity !== "string" || typeof value.label !== "string" || typeof value.advice !== "string") return null;
   if (typeof value.crisisDetected !== "boolean" || !isRecord(value.answers)) return null;
   const def = getTest(value.code);
@@ -39,18 +39,19 @@ function parseResult(value: unknown): SavedResult | null {
   const validation = validateAnswers(def, value.answers);
   if (!validation.valid) return null;
 
-  // Пересчитываем сохранённые результаты текущим алгоритмом. Это мигрирует старые
-  // записи после исправлений скоринга, не меняя сами ответы пользователя.
-  const score = scoreTest(def, validation.answers);
+  // Recalculate complete results with the current scoring rules. A partial result
+  // stays available for review, but it never receives a score or interpretation.
+  const complete = validateAnswers(def, validation.answers, { requireComplete: true }).valid;
+  const score = complete ? scoreTest(def, validation.answers) : null;
   return {
     ...value,
     testName: def.name,
-    totalScore: score.totalScore,
+    totalScore: score?.totalScore ?? null,
     maxScore: maxScore(def),
-    severity: score.severity,
-    label: score.label,
-    advice: score.advice,
-    crisisDetected: score.crisisDetected,
+    severity: score?.severity ?? "context",
+    label: score?.label ?? "Неполный результат",
+    advice: score?.advice ?? "Неполный набор ответов — балл и рекомендации не рассчитываются.",
+    crisisDetected: score?.crisisDetected ?? false,
     answers: validation.answers,
   } as SavedResult;
 }
@@ -174,7 +175,7 @@ export function severityColor(severity: string): string {
     case "positive":
       return "var(--chart-1)";
     case "context":
-      return "var(--chart-4)";
+      return "var(--muted-foreground)";
     case "severe":
       return "var(--destructive)";
     default:
