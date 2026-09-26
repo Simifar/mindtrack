@@ -38,6 +38,19 @@ test.describe("MindTrack critical browser flows", () => {
     await expect(page.getByRole("radio").first()).toHaveAttribute("aria-checked", "true");
   });
 
+  test("questionnaire disables answers until draft restoration completes", async ({ page, request }) => {
+    const response = await request.get("./tests/phq-9/run");
+    expect(response.ok()).toBeTruthy();
+    const initialMarkup = await response.text();
+    expect(initialMarkup).toContain('role="radiogroup"');
+    expect(initialMarkup).toContain('aria-busy="true"');
+    expect(initialMarkup).toContain('role="radio" aria-checked="false" disabled=""');
+
+    await gotoPath(page, "/tests/phq-9/run");
+    await expect(page.getByRole("radiogroup")).toHaveAttribute("aria-busy", "false");
+    await expect(page.getByRole("radio").first()).toBeEnabled();
+  });
+
   test("completing a test produces a result", async ({ page }) => {
     await gotoPath(page, "/tests/phq-9/run");
     for (let index = 0; index < 9; index += 1) {

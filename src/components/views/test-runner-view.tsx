@@ -58,6 +58,7 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
   }
 
   const total = def.questions.length;
+  const isHydrated = hydratedCode === code;
   const value = answers[current];
   const isLast = current === total - 1;
   const progress = ((current + 1) / total) * 100;
@@ -256,7 +257,7 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
 
           <p className="text-lg font-semibold leading-relaxed">{def.questions[current]}</p>
 
-          <div role="radiogroup" className="space-y-2" aria-label={def.questions[current]}>
+          <div role="radiogroup" className="space-y-2" aria-label={def.questions[current]} aria-busy={!isHydrated}>
             {getOptions(def, current).map((opt) => {
               const selected = value === opt.value;
               return (
@@ -265,6 +266,7 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
                   type="button"
                   role="radio"
                   aria-checked={selected}
+                  disabled={!isHydrated}
                   onClick={() => selectAnswer(opt.value)}
                   className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition hover:bg-accent ${
                     selected ? "border-primary bg-primary/5 ring-1 ring-primary/30" : ""
@@ -286,17 +288,17 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
       </Card>
 
       <div className="flex items-center justify-between gap-2">
-        <Button variant="outline" onClick={() => setCurrent((index) => Math.max(0, index - 1))} disabled={current === 0}>
+        <Button variant="outline" onClick={() => setCurrent((index) => Math.max(0, index - 1))} disabled={!isHydrated || current === 0}>
           <ArrowLeft className="h-4 w-4" />
           Назад
         </Button>
         {isLast ? (
-          <Button onClick={finish} disabled={value === undefined}>
+          <Button onClick={finish} disabled={!isHydrated || value === undefined}>
             <Check className="h-4 w-4" />
             Завершить
           </Button>
         ) : (
-          <Button onClick={() => setCurrent((index) => Math.min(total - 1, index + 1))} disabled={value === undefined}>
+          <Button onClick={() => setCurrent((index) => Math.min(total - 1, index + 1))} disabled={!isHydrated || value === undefined}>
             Далее
             <ArrowRight className="h-4 w-4" />
           </Button>
@@ -305,4 +307,3 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
     </div>
   );
 }
-
