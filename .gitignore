@@ -70,6 +70,9 @@ dev.pid
 *.tsbuildinfo
 next-env.d.ts
 local-*
+# Source modules are not local runtime artifacts.
+!src/lib/local-data.ts
+!src/lib/local-data.test.ts
 .claude
 .z-ai-config
 *.log
