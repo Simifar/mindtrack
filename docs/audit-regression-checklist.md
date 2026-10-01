@@ -103,3 +103,23 @@ This entry records a later verification pass. The 2026-09-18 baseline above is h
 Scoring review retained published scoring rules. PSS-10 no longer receives unsupported severity bands, and WHO-5 uses the WHO suggested raw-score threshold without diagnostic categories. Incomplete results remain visible as incomplete and do not display an interpreted score or recommendation. Local drafts, explicit diary inclusion in appointment exports, targeted deletion of MindTrack keys, and the crisis-support flow are covered by unit and browser checks.
 
 This pass is intentionally uncommitted: the task instruction prohibited commits, pushes, and deployment. The base-path check is a production build and output inspection; no public deployment was attempted.
+
+## Design and UX pass — 2026-10-01
+
+| Check | Result | Notes |
+| --- | --- | --- |
+| `bun run lint` | PASS | ESLint completed without findings |
+| `bun run typecheck` | PASS | TypeScript completed without errors |
+| `bun run test` | PASS | 45 tests, 137 assertions |
+| `bun run test:e2e -- --workers=1 --retries=0` | PASS | 19 passed, 1 skipped (conditional base-path job) |
+| `bun run build` | PASS | Static routes generated, including `/_not-found` |
+| `bun run check:bundle` | PASS | 775.4 KiB JavaScript, 53.6 KiB CSS (796.0 KiB before the pass) |
+| Static export browser smoke | PASS | Served `out/` and exercised hydration, client navigation, reload, the run screen and the 404 page: 0 page errors, 0 console errors, 0 failed requests |
+| Client-side navigation | PASS | 0 document loads across five shell/CTA navigations |
+| `git diff --check` | PASS | No whitespace errors |
+
+Scope of this pass: design tokens (`--sev-*`, `--attention`, dark-mode contrast, warm-tinted shadows), a shared form field layer, real headings from `CardTitle`, 44 px button defaults with pressed and focus states, catalogue composition and per-instrument history, a shared result summary with a score scale and previous-result comparison, sticky action rows, honest "not answered yet" scale chips, undo for diary deletion, an addressable result (`/results?open=<id>`), a composed empty state, and an `AppLink` that keeps navigation client-side without `next/link` prefetch 404s in the static export.
+
+Unchanged by design: scoring, instrument wording, thresholds, the privacy model, the crisis flow and its copy, and all storage keys.
+
+`docs/mindtrack-home.png` was regenerated: the previous image still showed the retired indigo theme and older card copy. In sandboxed local runs Chromium needs `TEMP`/`TMP` pointed at a writable directory to create its profile; the temporary directory is not part of the change.

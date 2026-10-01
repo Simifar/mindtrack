@@ -49,15 +49,18 @@ export function CrisisBanner() {
     }
 
     document.addEventListener("keydown", handleKeyDown);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
       previousFocus?.focus();
     };
   }, [open, setOpen]);
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 sm:items-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/40 p-4 sm:items-center">
       <div
         ref={dialogRef}
         role="dialog"
@@ -65,20 +68,20 @@ export function CrisisBanner() {
         aria-labelledby="crisis-dialog-title"
         aria-describedby="crisis-dialog-description"
         tabIndex={-1}
-        className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-xl border border-orange-200 bg-white shadow-2xl dark:border-orange-800 dark:bg-card"
+        className="max-h-[calc(100dvh-2rem)] w-full max-w-lg overflow-y-auto rounded-2xl border bg-card shadow-2xl"
       >
-        <div className="flex items-start gap-3 border-b border-orange-100 bg-orange-50 p-4 dark:border-orange-900 dark:bg-orange-950/40">
-          <div className="mt-0.5 rounded-full bg-orange-100 p-2">
-            <LifeBuoy className="h-5 w-5 text-orange-600" />
+        <div className="flex items-start gap-3 border-b border-attention/30 bg-attention-surface p-4">
+          <div className="mt-0.5 rounded-full bg-attention/20 p-2">
+            <LifeBuoy aria-hidden="true" className="h-5 w-5 text-attention-foreground" />
           </div>
           <div className="flex-1">
-            <h2 id="crisis-dialog-title" className="font-semibold text-orange-900 dark:text-orange-200">
+            <h2 id="crisis-dialog-title" className="font-semibold text-attention-foreground">
               {CRISIS_RESOURCES.title}
             </h2>
-            <p id="crisis-dialog-description" className="mt-1 text-sm text-orange-800 dark:text-orange-100">{CRISIS_RESOURCES.body}</p>
+            <p id="crisis-dialog-description" className="mt-1 text-sm text-attention-foreground/90">{CRISIS_RESOURCES.body}</p>
           </div>
           <Button ref={closeButtonRef} variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Закрыть">
-            <X className="h-4 w-4" />
+            <X aria-hidden="true" className="h-4 w-4" />
           </Button>
         </div>
         <div className="space-y-2 p-4">
@@ -86,20 +89,20 @@ export function CrisisBanner() {
             <a
               key={line.phone}
               href={line.href}
-              className="flex items-center justify-between rounded-lg border bg-card p-3 transition hover:bg-accent"
+              className="flex items-center justify-between gap-3 rounded-xl border bg-muted/40 p-3 transition hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
             >
               <div className="min-w-0">
                 <div className="font-medium">{line.name}</div>
                 <div className="text-sm text-muted-foreground">{line.detail}</div>
-                <div className="mt-1 break-words text-[11px] text-muted-foreground">Источник: {line.source} · проверено {line.checkedAt}</div>
+                <div className="mt-1 break-words text-[11px] leading-relaxed text-muted-foreground">Источник: {line.source} · проверено {line.checkedAt}</div>
               </div>
-              <div className="flex items-center gap-2 font-mono font-semibold text-orange-700 dark:text-orange-300">
-                <Phone className="h-4 w-4" />
+              <div className="flex shrink-0 items-center gap-2 font-mono font-semibold text-attention-foreground">
+                <Phone aria-hidden="true" className="h-4 w-4" />
                 {line.phone}
               </div>
             </a>
           ))}
-          <p className="pt-2 text-xs text-muted-foreground">
+          <p className="pt-2 text-xs leading-relaxed text-muted-foreground">
             Эта подсказка появилась после ответа в анкете или совпадения фразы в тексте. Поиск слов может
             ошибиться или не понять контекст; это не оценка риска. Раздел «Помощь» доступен в любой момент.
             MindTrack никого не уведомляет.

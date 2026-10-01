@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BookHeart, Download, Printer, Save, Trash2 } from "lucide-react";
+import { BookHeart, Download, Printer, Save, Trash2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { RangeField, TextField, fieldClass } from "@/components/ui/field";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/store/app-store";
 import { getCrisisPolicy } from "@/lib/crisis";
@@ -36,9 +37,17 @@ const initialForm: DiaryForm = {
   notes: "",
 };
 
-const fieldClass = "w-full rounded-lg border bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus:ring-2 focus:ring-ring";
-
 type DraftStatus = "loading" | "empty" | "pending" | "saved" | "error";
+
+const DRAFT_STATUS_TEXT: Record<DraftStatus, string> = {
+  loading: "Загружаем черновик…",
+  empty: "Черновика пока нет.",
+  pending: "Черновик сохраняется…",
+  saved: "Черновик сохранён",
+  error: "Не удалось сохранить черновик. Введённый текст пока остаётся в форме.",
+};
+
+const ENTRY_LIMIT = 30;
 
 function hasDiaryContent(form: DiaryForm): boolean {
   return form.mood !== 5 || form.sleepHours !== "" || form.sleepQuality !== 5 || form.energy !== 5 ||
@@ -49,26 +58,12 @@ function blankForm(): DiaryForm {
   return { ...initialForm, date: localDate() };
 }
 
-function RangeField({ label, value, onChange, hint }: { label: string; value: number; onChange: (value: number) => void; hint?: string }) {
-  return (
-    <label className="space-y-1.5 text-sm">
-      <span className="flex items-center justify-between gap-2 font-medium">
-        <span>{label}</span>
-        <span className="rounded-md bg-muted px-2 py-0.5 text-xs tabular-nums">{value}/10</span>
-      </span>
-      <input type="range" min="0" max="10" step="1" value={value} onChange={(event) => onChange(Number(event.target.value))} className="w-full accent-primary" />
-      {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
-    </label>
-  );
+function sanitizeHours(value: string): string {
+  return value.replace(/[^\d.,]/g, "").slice(0, 5);
 }
 
-function TextField({ label, value, onChange, placeholder, rows = 3 }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; rows?: number }) {
-  return (
-    <label className="block space-y-1.5 text-sm">
-      <span className="font-medium">{label}</span>
-      <textarea className={`${fieldClass} resize-y`} rows={rows} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
-    </label>
-  );
+function allTouched(): Set<keyof DiaryForm> {
+  return new Set(Object.keys(initialForm) as (keyof DiaryForm)[]);
 }
 
 export function DiaryView() {
@@ -78,6 +73,9 @@ export function DiaryView() {
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [draftStatus, setDraftStatus] = useState<DraftStatus>("loading");
   const [hydrated, setHydrated] = useState(false);
+  const [touched, setTouched] = useState<Set<keyof DiaryForm>>(new Set());
+  const [showAll, setShowAll] = useState(false);
+  const [lastDeleted, setLastDeleted] = useState<DiaryEntry | null>(null);
   const draftEditedRef = useRef(false);
   const editedFieldsRef = useRef(new Set<keyof DiaryForm>());
 
@@ -89,6 +87,7 @@ export function DiaryView() {
       setForm((current) => editedFieldsRef.current.size === 0
         ? restored
         : { ...restored, ...Object.fromEntries(Array.from(editedFieldsRef.current, (key) => [key, current[key]])) } as DiaryForm);
+      if (draft) setTouched(allTouched());
       setDraftStatus(draftEditedRef.current ? "pending" : draft ? "saved" : "empty");
       setHydrated(true);
     }, 0);
@@ -120,17 +119,26 @@ export function DiaryView() {
       const draft = loadDiaryDraft();
       if (draft) {
         setForm(draft);
+        setTouched(allTouched());
         setDraftStatus("saved");
       } else if (event.newValue === null) {
         setForm(blankForm());
+        setTouched(new Set());
         setDraftStatus("empty");
       }
     }
   }, [STORAGE_KEYS.diary, STORAGE_KEYS.diaryDraft]), []);
 
+  useEffect(() => {
+    if (!lastDeleted) return;
+    const timer = window.setTimeout(() => setLastDeleted(null), 12_000);
+    return () => window.clearTimeout(timer);
+  }, [lastDeleted]);
+
   function update<K extends keyof DiaryForm>(key: K, value: DiaryForm[K]) {
     draftEditedRef.current = true;
     editedFieldsRef.current.add(key);
+    setTouched((current) => new Set(current).add(key));
     setDraftStatus("pending");
     setForm((current) => ({ ...current, [key]: value }));
   }
@@ -153,6 +161,7 @@ export function DiaryView() {
     }
     draftEditedRef.current = false;
     setForm(blankForm());
+    setTouched(new Set());
     setDraftStatus("empty");
     toast({ title: "Запись сохранена" });
     const crisis = getCrisisPolicy("diary", `${form.warningSigns}\n${form.notes}`);
@@ -165,6 +174,7 @@ export function DiaryView() {
       clearDiaryDraft();
       draftEditedRef.current = false;
       setForm(blankForm());
+      setTouched(new Set());
       setDraftStatus("empty");
     } catch (error) {
       toast({ title: error instanceof Error ? error.message : "Не удалось удалить черновик", variant: "destructive" });
@@ -172,11 +182,24 @@ export function DiaryView() {
   }
 
   function removeEntry(id: string) {
+    const removed = entries.find((entry) => entry.id === id) ?? null;
     try {
       deleteDiaryEntry(id);
       setEntries(loadDiaryEntries());
+      setLastDeleted(removed);
     } catch (error) {
       toast({ title: error instanceof Error ? error.message : "Не удалось удалить запись", variant: "destructive" });
+    }
+  }
+
+  function undoRemove() {
+    if (!lastDeleted) return;
+    try {
+      saveDiaryEntry(lastDeleted);
+      setEntries(loadDiaryEntries());
+      setLastDeleted(null);
+    } catch (error) {
+      toast({ title: error instanceof Error ? error.message : "Не удалось вернуть запись", variant: "destructive" });
     }
   }
 
@@ -193,40 +216,58 @@ export function DiaryView() {
     toast({ title: "Дневник скачан" });
   }
 
+  const visibleEntries = showAll ? entries : entries.slice(0, ENTRY_LIMIT);
+
   return (
     <div className="mx-auto max-w-4xl space-y-5">
-      <div className="flex items-start gap-3">
-        <div className="rounded-xl bg-primary/10 p-2.5 text-primary"><BookHeart className="h-6 w-6" /></div>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Дневник состояния</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Настроение, сон, активность и факторы дня — чтобы обсуждать динамику со специалистом.</p>
-        </div>
-      </div>
+      <header>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Дневник состояния</h1>
+        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+          Настроение, сон, активность и факторы дня — чтобы обсуждать динамику со специалистом.
+        </p>
+      </header>
 
-      <Card className="border-primary/20 bg-primary/5">
-        <CardContent className="p-4 text-sm text-muted-foreground">
-          Шкалы 0–10 — способ заметить изменения, а не диагноз и не оценка «правильности» состояния. Незаписанный текст сохраняется в этом браузере; отдельную запись создаёт кнопка ниже.
-        </CardContent>
-      </Card>
+      <p className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm leading-relaxed text-muted-foreground">
+        Шкалы 0–10 — способ заметить изменения, а не диагноз и не оценка «правильности» состояния. Незаписанный текст сохраняется в этом браузере; отдельную запись создаёт кнопка ниже.
+      </p>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Запись за день</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle as="h2" className="text-lg">Запись за день</CardTitle>
+        </CardHeader>
         <CardContent className="space-y-5">
           <p role="status" aria-live="polite" className="text-xs text-muted-foreground">
-            {draftStatus === "loading" ? "Загружаем черновик…" : draftStatus === "pending" ? "Черновик сохраняется…" : draftStatus === "saved" ? "Черновик сохранён" : draftStatus === "error" ? "Не удалось сохранить черновик. Введённый текст пока остаётся в форме." : "Черновика пока нет."}
+            {DRAFT_STATUS_TEXT[draftStatus]}
           </p>
-          <label className="block max-w-xs space-y-1.5 text-sm font-medium">
-            <span>Дата</span>
+
+          <label className="block max-w-xs space-y-1.5 text-sm">
+            <span className="font-medium">Дата</span>
             <input type="date" className={fieldClass} value={form.date} onChange={(event) => update("date", event.target.value)} />
           </label>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <RangeField label="Настроение" value={form.mood} onChange={(value) => update("mood", value)} hint="0 — очень тяжело, 5 — примерно обычно, 10 — необычно высоко" />
-            <label className="space-y-1.5 text-sm"><span className="font-medium">Сон, часов</span><input type="number" min="0" max="24" step="0.5" className={fieldClass} value={form.sleepHours} onChange={(event) => update("sleepHours", event.target.value)} placeholder="например, 7,5" /></label>
-            <RangeField label="Качество сна" value={form.sleepQuality} onChange={(value) => update("sleepQuality", value)} />
-            <RangeField label="Энергия" value={form.energy} onChange={(value) => update("energy", value)} />
-            <RangeField label="Тревога" value={form.anxiety} onChange={(value) => update("anxiety", value)} />
-            <RangeField label="Раздражительность" value={form.irritability} onChange={(value) => update("irritability", value)} />
+            <RangeField
+              label="Настроение"
+              value={form.mood}
+              touched={touched.has("mood")}
+              onChange={(value) => update("mood", value)}
+              hint="0 — очень тяжело, 5 — примерно обычно, 10 — необычно высоко"
+            />
+            <label className="space-y-1.5 text-sm">
+              <span className="font-medium">Сон, часов</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                className={fieldClass}
+                value={form.sleepHours}
+                onChange={(event) => update("sleepHours", sanitizeHours(event.target.value))}
+                placeholder="например, 7,5"
+              />
+            </label>
+            <RangeField label="Качество сна" value={form.sleepQuality} touched={touched.has("sleepQuality")} onChange={(value) => update("sleepQuality", value)} startLabel="очень плохо" endLabel="очень хорошо" />
+            <RangeField label="Энергия" value={form.energy} touched={touched.has("energy")} onChange={(value) => update("energy", value)} startLabel="нет сил" endLabel="много сил" />
+            <RangeField label="Тревога" value={form.anxiety} touched={touched.has("anxiety")} onChange={(value) => update("anxiety", value)} startLabel="спокойно" endLabel="очень сильная" />
+            <RangeField label="Раздражительность" value={form.irritability} touched={touched.has("irritability")} onChange={(value) => update("irritability", value)} startLabel="нет" endLabel="очень сильная" />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -238,37 +279,107 @@ export function DiaryView() {
             <TextField label="Ранние признаки или важные изменения" value={form.warningSigns} onChange={(value) => update("warningSigns", value)} placeholder="Что отличается от обычного состояния" />
           </div>
           <TextField label="Комментарий" value={form.notes} onChange={(value) => update("notes", value)} placeholder="Дополнительные детали для обсуждения с врачом" />
-          <div className="no-print flex flex-wrap gap-2">
-            <Button onClick={save}><Save className="h-4 w-4" /> Сохранить запись</Button>
-            {draftStatus !== "empty" && draftStatus !== "loading" && <Button variant="outline" onClick={discardDraft}><Trash2 className="h-4 w-4" /> Удалить черновик</Button>}
-            <Button variant="outline" onClick={downloadJson}><Download className="h-4 w-4" /> Экспорт JSON</Button>
-            <Button variant="outline" onClick={() => window.print()}><Printer className="h-4 w-4" /> Печать</Button>
+
+          <div className="no-print sticky bottom-24 z-20 -mx-2 flex flex-wrap items-center gap-2 rounded-2xl border border-border/70 bg-background/85 p-2 backdrop-blur lg:bottom-4">
+            <Button onClick={save}>
+              <Save aria-hidden="true" className="h-4 w-4" /> Сохранить запись
+            </Button>
+            {draftStatus !== "empty" && draftStatus !== "loading" ? (
+              <Button variant="outline" onClick={discardDraft}>
+                <Trash2 aria-hidden="true" className="h-4 w-4" /> Удалить черновик
+              </Button>
+            ) : null}
+            <Button variant="ghost" size="sm" onClick={downloadJson}>
+              <Download aria-hidden="true" className="h-4 w-4" /> Экспорт JSON
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => window.print()}>
+              <Printer aria-hidden="true" className="h-4 w-4" /> Печать
+            </Button>
+            <span aria-hidden="true" className="ml-auto hidden text-xs text-muted-foreground sm:block">
+              {DRAFT_STATUS_TEXT[draftStatus]}
+            </span>
           </div>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Последние записи</CardTitle></CardHeader>
-        <CardContent>
-          {entries.length === 0 ? <p className="text-sm text-muted-foreground">Здесь появятся сохранённые записи.</p> : (
-            <div className="space-y-3">
-              {entries.slice(0, 30).map((entry) => (
-                <div key={entry.id} className="rounded-xl border p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="font-medium">{new Date(`${entry.date}T12:00:00`).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}</div>
-                    <Button variant="ghost" size="sm" onClick={() => removeEntry(entry.id)}><Trash2 className="h-4 w-4" /> Удалить</Button>
-                  </div>
-                  <div className="mt-2 grid gap-2 text-sm text-muted-foreground sm:grid-cols-4">
-                    <span>Настроение: <b className="text-foreground">{entry.mood}/10</b></span>
-                    <span>Сон: <b className="text-foreground">{entry.sleepHours || "—"} ч</b></span>
-                    <span>Энергия: <b className="text-foreground">{entry.energy}/10</b></span>
-                    <span>Тревога: <b className="text-foreground">{entry.anxiety}/10</b></span>
-                  </div>
-                  {(entry.notes || entry.warningSigns) && <p className="mt-2 whitespace-pre-wrap text-sm">{entry.warningSigns || entry.notes}</p>}
-                </div>
-              ))}
+        <CardHeader>
+          <CardTitle as="h2" className="text-lg">Последние записи</CardTitle>
+          {entries.length > 0 ? (
+            <p className="text-xs tabular-nums text-muted-foreground">
+              {showAll || entries.length <= ENTRY_LIMIT
+                ? `Всего записей: ${entries.length}`
+                : `Показано ${ENTRY_LIMIT} из ${entries.length}`}
+            </p>
+          ) : null}
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {lastDeleted ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/50 p-3 text-sm">
+              <span>Запись удалена.</span>
+              <Button variant="ghost" size="sm" onClick={undoRemove}>
+                <Undo2 aria-hidden="true" className="h-4 w-4" /> Вернуть
+              </Button>
             </div>
+          ) : null}
+
+          {entries.length === 0 ? (
+            <div className="flex items-start gap-3 rounded-xl border border-dashed border-border/70 bg-muted/30 p-4 text-sm leading-relaxed text-muted-foreground">
+              <BookHeart aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+              <p>Записей пока нет. Заполните дату и шкалы выше — запись появится здесь и её можно будет включить в подготовку к приёму.</p>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {visibleEntries.map((entry) => (
+                <li key={entry.id} className="rounded-xl border p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium tabular-nums">
+                      {new Date(`${entry.date}T12:00:00`).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}
+                    </p>
+                    <Button variant="ghost" size="sm" onClick={() => removeEntry(entry.id)} className="text-muted-foreground hover:text-destructive">
+                      <Trash2 aria-hidden="true" className="h-4 w-4" /> Удалить
+                    </Button>
+                  </div>
+                  <dl className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-4">
+                    <div>
+                      <dt className="text-xs">Настроение</dt>
+                      <dd className="font-medium tabular-nums text-foreground">{entry.mood}/10</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs">Сон</dt>
+                      <dd className="font-medium tabular-nums text-foreground">{entry.sleepHours || "—"} ч</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs">Энергия</dt>
+                      <dd className="font-medium tabular-nums text-foreground">{entry.energy}/10</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs">Тревога</dt>
+                      <dd className="font-medium tabular-nums text-foreground">{entry.anxiety}/10</dd>
+                    </div>
+                  </dl>
+                  {entry.warningSigns ? (
+                    <p className="mt-3 text-sm leading-relaxed">
+                      <span className="text-muted-foreground">Ранние признаки: </span>
+                      <span className="whitespace-pre-wrap">{entry.warningSigns}</span>
+                    </p>
+                  ) : null}
+                  {entry.notes ? (
+                    <p className="mt-2 text-sm leading-relaxed">
+                      <span className="text-muted-foreground">Комментарий: </span>
+                      <span className="whitespace-pre-wrap">{entry.notes}</span>
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
           )}
+
+          {entries.length > visibleEntries.length ? (
+            <Button variant="outline" size="sm" onClick={() => setShowAll(true)}>
+              Показать все записи ({entries.length})
+            </Button>
+          ) : null}
         </CardContent>
       </Card>
     </div>

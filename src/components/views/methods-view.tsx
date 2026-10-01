@@ -14,7 +14,7 @@ export function MethodsView() {
       </Button>
 
       <div>
-        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">О методиках и ограничениях</h1>
+        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">О методиках и ограничениях</h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           MindTrack показывает результаты скрининговых опросников для самонаблюдения. Скрининг не подтверждает и не исключает диагноз и не заменяет разговор с врачом или психологом.
         </p>
@@ -46,8 +46,8 @@ export function MethodsView() {
         ))}
       </div>
 
-      <Card className="border-orange-200 bg-orange-50 dark:border-orange-900 dark:bg-orange-950/30">
-        <CardContent className="p-4 text-sm leading-relaxed">
+      <Card className="border-attention/40 bg-attention-surface shadow-none">
+        <CardContent className="p-4 text-sm leading-relaxed text-attention-foreground">
           Если опасность непосредственная, звоните 112. Кризисный блок MindTrack не является оценкой риска: он только показывает доступные ресурсы помощи.
         </CardContent>
       </Card>

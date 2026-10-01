@@ -25,6 +25,19 @@ export const metadata: Metadata = {
     title: "MindTrack",
     statusBarStyle: "default",
   },
+  openGraph: {
+    type: "website",
+    locale: "ru_RU",
+    siteName: "MindTrack",
+    title: "MindTrack — справочник психологических тестов",
+    description:
+      "Скрининговые опросники самонаблюдения без регистрации: ответы обрабатываются в браузере и остаются на вашем устройстве. Не медицинское ПО.",
+  },
+  twitter: {
+    card: "summary",
+    title: "MindTrack — справочник психологических тестов",
+    description: "Приватное самонаблюдение: ответы остаются в вашем браузере. Не медицинское ПО.",
+  },
 };
 
 export const viewport: Viewport = {
@@ -41,7 +54,7 @@ export default function RootLayout({
   return (
     <html lang="ru" suppressHydrationWarning>
       <body className="antialiased bg-background text-foreground">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange={false}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem enableColorScheme disableTransitionOnChange={false}>
           {children}
           <Toaster />
         </ThemeProvider>

@@ -161,25 +161,28 @@ export function getResultCompleteness(result: SavedResult): ResultCompleteness {
   return def && validateAnswers(def, result.answers, { requireComplete: true }).valid ? "complete" : "incomplete";
 }
 
-/** Цвет бейджа по severity — через CSS-переменные темы. */
+/**
+ * Цвет бейджа по severity — через семантическую шкалу темы.
+ * Значения шкалы проверены на контраст текста в светлой и тёмной теме.
+ */
 export function severityColor(severity: string): string {
   switch (severity) {
     case "none":
     case "negative":
-      return "var(--chart-2)";
+      return "var(--sev-none)";
     case "mild":
-      return "var(--chart-4)";
+      return "var(--sev-mild)";
     case "moderate":
-      return "var(--chart-5)";
+      return "var(--sev-moderate)";
     case "moderately_severe":
     case "positive":
-      return "var(--chart-1)";
+      return "var(--sev-severe)";
     case "context":
-      return "var(--muted-foreground)";
+      return "var(--sev-neutral)";
     case "severe":
-      return "var(--destructive)";
+      return "var(--sev-severe)";
     default:
-      return "var(--muted-foreground)";
+      return "var(--sev-neutral)";
   }
 }
 

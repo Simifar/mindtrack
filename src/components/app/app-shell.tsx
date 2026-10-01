@@ -7,8 +7,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { CrisisBanner } from "./crisis-banner";
 import { DisclaimerFooter } from "./disclaimer-footer";
 import { MindTrackMark } from "./mindtrack-logo";
-
-const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
+import { AppLink } from "./app-link";
 
 const NAV: { id: ViewId; label: string; icon: typeof ClipboardList }[] = [
   { id: "tests", label: "Тесты", icon: ClipboardList },
@@ -18,15 +17,43 @@ const NAV: { id: ViewId; label: string; icon: typeof ClipboardList }[] = [
   { id: "methods", label: "Методики", icon: Info },
 ];
 
+/** Группы рейла: тот же состав и те же подписи, но с читаемой структурой. */
+const NAV_GROUPS: { title: string; ids: ViewId[] }[] = [
+  { title: "Пройти", ids: ["tests"] },
+  { title: "Мои данные", ids: ["diary", "visit", "results"] },
+  { title: "Справка", ids: ["methods"] },
+];
+
+const VIEW_TITLES: Record<ViewId, string> = {
+  tests: "Каталог тестов",
+  "test-detail": "Тесты",
+  "test-run": "Тесты",
+  diary: "Дневник состояния",
+  visit: "Подготовка к приёму",
+  results: "Результаты",
+  methods: "О методиках и ограничениях",
+  help: "Помощь",
+  privacy: "Приватность",
+};
+
+/**
+ * Переходы внутри приложения без перезагрузки документа: ссылка остаётся
+ * настоящей (новая вкладка, копирование адреса), но обычный клик идёт через
+ * history.pushState. Так док на мобильном не «мигает» полной загрузкой.
+ */
 function Logo() {
   return (
-    <a href={`${BASE_PATH}/tests`} aria-label="MindTrack — к каталогу тестов" className="flex w-fit items-center gap-3 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring">
+    <AppLink
+      path="/tests"
+      aria-label="MindTrack — к каталогу тестов"
+      className="flex w-fit items-center gap-3 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
+    >
       <MindTrackMark className="h-10 w-10 shrink-0 rounded-xl" />
       <div className="leading-tight">
         <div className="text-base font-semibold tracking-tight">MindTrack</div>
         <div className="mt-0.5 text-[11px] text-muted-foreground">самонаблюдение и подготовка</div>
       </div>
-    </a>
+    </AppLink>
   );
 }
 
@@ -35,6 +62,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const route = routeFromPath(pathname);
 
   const active = (id: ViewId) => route.view === id || (id === "tests" && (route.view === "test-detail" || route.view === "test-run"));
+  const sectionTitle = VIEW_TITLES[route.view];
 
   return (
     <div className="app-shell flex min-h-screen bg-background">
@@ -44,37 +72,55 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="px-6 py-6">
           <Logo />
         </div>
-        <nav aria-label="Основные разделы" className="flex-1 space-y-1 px-3">
-          {NAV.map((item) => {
-            const Icon = item.icon;
-            const isActive = active(item.id);
-            return (
-              <a
-                key={item.id}
-                href={`${BASE_PATH}${pathForView(item.id, null)}`}
-                aria-current={isActive ? "page" : undefined}
-                className={cn(
-                  "flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                  isActive
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </a>
-            );
-          })}
+        <nav aria-label="Основные разделы" className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.title} className="space-y-1">
+              <p className="px-3.5 text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground/80">
+                {group.title}
+              </p>
+              {group.ids.map((id) => {
+                const item = NAV.find((entry) => entry.id === id);
+                if (!item) return null;
+                const Icon = item.icon;
+                const isActive = active(item.id);
+                const path = pathForView(item.id, null);
+                return (
+                  <AppLink
+                    key={item.id}
+                    path={path}
+                    aria-current={isActive ? "page" : undefined}
+                    className={cn(
+                      "relative flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                      isActive
+                        ? "bg-primary/10 font-semibold text-foreground before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-primary"
+                        : "font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                    )}
+                  >
+                    <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+                    {item.label}
+                  </AppLink>
+                );
+              })}
+            </div>
+          ))}
         </nav>
-        <div className="space-y-4 px-5 pb-5">
+        <div className="space-y-3 px-5 pb-5">
           <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4 text-xs leading-relaxed text-muted-foreground">
             <p className="font-medium text-foreground">Только на этом устройстве</p>
             <p className="mt-1">Без аккаунта и отправки ответов на сервер.</p>
           </div>
-          <a href={`${BASE_PATH}/help`} className="flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-ring">
+          <AppLink
+            path="/help"
+            className="flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-ring"
+          >
             <LifeBuoy aria-hidden="true" className="h-4 w-4" /> Помощь
-          </a>
-          <a href={`${BASE_PATH}/privacy`} className="block px-2 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">Приватность и удаление данных</a>
+          </AppLink>
+          <AppLink
+            path="/privacy"
+            className="flex min-h-11 items-center rounded-xl px-2 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring"
+          >
+            Приватность и удаление данных
+          </AppLink>
         </div>
       </aside>
 
@@ -84,20 +130,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border/80 bg-card/90 px-4 py-3 backdrop-blur lg:hidden">
           <Logo />
           <div className="flex items-center gap-1">
-            <a href={`${BASE_PATH}/help`} aria-label="Помощь" className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-ring">
+            <AppLink
+              path="/help"
+              aria-label="Помощь"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-muted-foreground hover:bg-accent hover:text-accent-foreground focus-visible:outline-2 focus-visible:outline-ring"
+            >
               <LifeBuoy aria-hidden="true" className="h-5 w-5" />
-            </a>
+            </AppLink>
             <ThemeToggle />
           </div>
         </header>
 
-        {/* Десктопная шапка с переключателем темы */}
-        <header className="sticky top-0 z-30 hidden items-center justify-between border-b border-border/80 bg-card/85 px-8 py-3 backdrop-blur lg:flex">
-          <p className="text-xs text-muted-foreground">Локальный справочник · ответы остаются в браузере</p>
+        {/* Десктопная шапка: раздел виден и после прокрутки страницы */}
+        <header className="sticky top-0 z-30 hidden items-center justify-between gap-3 border-b border-border/80 bg-card/85 px-8 py-3 backdrop-blur lg:flex">
+          <p className="truncate text-xs font-medium text-muted-foreground">{sectionTitle}</p>
           <ThemeToggle />
         </header>
 
-        <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-7 sm:px-7 sm:pt-9 lg:px-10 lg:pb-8">{children}</main>
+        <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 pb-10 pt-7 sm:px-7 sm:pt-9 lg:px-10 lg:pb-10">{children}</main>
 
         <DisclaimerFooter />
       </div>
@@ -108,21 +158,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {NAV.map((item) => {
             const Icon = item.icon;
             const isActive = active(item.id);
+            const path = pathForView(item.id, null);
             return (
-              <a
+              <AppLink
                 key={item.id}
-                href={`${BASE_PATH}${pathForView(item.id, null)}`}
+                path={path}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-[1.25rem] px-1 py-2 text-center text-[0.625rem] font-medium leading-tight transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring sm:text-xs",
+                  "flex min-h-12 min-w-0 flex-col items-center justify-center gap-0.5 rounded-[1.25rem] px-1 py-2 text-center text-[0.625rem] font-medium leading-tight transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring min-[380px]:text-[0.6875rem]",
                   isActive
-                    ? "bg-primary text-primary-foreground shadow-sm"
+                    ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                 )}
               >
                 <Icon aria-hidden="true" className="h-5 w-5 shrink-0" />
                 <span className="max-w-full whitespace-nowrap">{item.label}</span>
-              </a>
+              </AppLink>
             );
           })}
         </div>

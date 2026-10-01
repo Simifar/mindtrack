@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getOptions, getTest, scoreTest, maxScore, formatResultText, formatScore } from "@/data/tests";
-import { saveResult, severityColor } from "@/lib/results";
+import { getOptions, getTest, scoreTest, maxScore, formatResultText, type ScoreResult } from "@/data/tests";
+import { loadResultsByCode, saveResult } from "@/lib/results";
 import { deleteDraft, loadDraft, saveDraft } from "@/lib/progress";
 import { getCrisisPolicy } from "@/lib/crisis";
 import { navigateToView } from "@/lib/navigation";
@@ -9,10 +9,19 @@ import { useAppStore } from "@/store/app-store";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { AlertTriangle, ArrowLeft, ArrowRight, Check, Copy, Download, Printer, RotateCcw } from "lucide-react";
+import { ResultSummary, type PreviousScore } from "@/components/app/result-summary";
+import { AppLink } from "@/components/app/app-link";
+import { cn } from "@/lib/utils";
+import { AlertTriangle, ArrowLeft, ArrowRight, Check, ClipboardList, Copy, Download, History, Printer, RotateCcw, X } from "lucide-react";
 
 type Answers = Record<number, number>;
+
+type DoneState = {
+  result: ScoreResult;
+  date: Date;
+  id: string;
+  previous: PreviousScore | null;
+};
 
 export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
   const code = codeOverride;
@@ -22,7 +31,7 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
   const def = code ? getTest(code) : undefined;
   const [current, setCurrent] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
-  const [done, setDone] = useState<{ result: ReturnType<typeof scoreTest>; date: Date } | null>(null);
+  const [done, setDone] = useState<DoneState | null>(null);
   const [hydratedCode, setHydratedCode] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,11 +57,11 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
 
   if (!def) {
     return (
-      <div className="p-6">
+      <div className="mx-auto max-w-2xl space-y-4">
         <Button variant="ghost" onClick={() => navigateToView("tests")}>
-          <ArrowLeft className="h-4 w-4" /> К списку тестов
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" /> К списку тестов
         </Button>
-        <p className="mt-4 text-muted-foreground">Тест не найден.</p>
+        <p className="text-muted-foreground">Тест не найден.</p>
       </div>
     );
   }
@@ -61,7 +70,7 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
   const isHydrated = hydratedCode === code;
   const value = answers[current];
   const isLast = current === total - 1;
-  const progress = ((current + 1) / total) * 100;
+  const answeredCount = Object.keys(answers).length;
 
   function restart() {
     if (code) deleteDraft(code);
@@ -72,34 +81,40 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
 
   function finish() {
     if (!def) return;
-    const r = scoreTest(def, answers);
+    const result = scoreTest(def, answers);
     const date = new Date();
+    const previous = loadResultsByCode(def.code)[0] ?? null;
     try {
-      saveResult({
+      const saved = saveResult({
         code: def.code,
         testName: def.name,
         dateISO: date.toISOString(),
-        totalScore: r.totalScore,
+        totalScore: result.totalScore,
         maxScore: maxScore(def),
-        severity: r.severity,
-        label: r.label,
-        advice: r.advice,
-        crisisDetected: r.crisisDetected,
+        severity: result.severity,
+        label: result.label,
+        advice: result.advice,
+        crisisDetected: result.crisisDetected,
         answers: { ...answers },
+      });
+      deleteDraft(def.code);
+      setDone({
+        result,
+        date,
+        id: saved.id,
+        previous: previous ? { totalScore: previous.totalScore, dateISO: previous.dateISO } : null,
       });
     } catch (error) {
       toast({ title: error instanceof Error ? error.message : "Не удалось сохранить результат", variant: "destructive" });
       return;
     }
-    deleteDraft(def.code);
-    setDone({ result: r, date });
-    if (getCrisisPolicy("screening", r.crisisDetected).shouldOpenDialog) setCrisisOpen(true);
+    if (getCrisisPolicy("screening", result.crisisDetected).shouldOpenDialog) setCrisisOpen(true);
   }
 
-  function selectAnswer(value: number) {
+  function selectAnswer(next: number) {
     if (!def) return;
-    setAnswers((previous) => ({ ...previous, [current]: value }));
-    const crisis = getCrisisPolicy("screening", def.scoring.crisisQuestionIndexes?.includes(current) && value > 0);
+    setAnswers((previous) => ({ ...previous, [current]: next }));
+    const crisis = getCrisisPolicy("screening", def.scoring.crisisQuestionIndexes?.includes(current) && next > 0);
     if (crisis.shouldOpenDialog) setCrisisOpen(true);
   }
 
@@ -144,50 +159,22 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
 
   // ---------- Экран результата ----------
   if (done) {
-    const r = done.result;
-    const color = severityColor(r.severity);
+    const { result, date, id, previous } = done;
     return (
       <div className="mx-auto max-w-xl space-y-5">
+        <header>
+          <h1 className="text-2xl font-semibold tracking-tight">{def.name}</h1>
+          <p className="mt-1 text-sm tabular-nums text-muted-foreground">{date.toLocaleString("ru-RU")}</p>
+        </header>
+
         <Card className="py-6">
-          <CardContent className="space-y-5 px-6">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{def.name}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">{done.date.toLocaleString("ru-RU")}</p>
-            </div>
+          <CardContent className="space-y-5">
+            <ResultSummary def={def} score={result} max={maxScore(def)} previous={previous} />
 
-            <div className="flex items-end gap-2">
-              <span className="text-5xl font-bold leading-none">{r.totalScore}</span>
-              <span className="pb-1 text-lg text-muted-foreground">{formatScore(def, r).replace(String(r.totalScore), "").trim()}</span>
-            </div>
-
-            {r.normalizedScore !== undefined && def.scoring.mode === "sum" && def.scoring.normalizedScore && (
-              <p className="text-sm text-muted-foreground">Нормированный результат WHO-5: <strong>{r.normalizedScore}</strong> {def.scoring.normalizedScore.label}</p>
-            )}
-
-            {def.code === "MDQ" && r.details && (
-              <div className="rounded-lg bg-muted/60 p-3 text-sm text-muted-foreground">
-                <p className="font-medium text-foreground">Условия скрининга MDQ</p>
-                <p className="mt-1">Симптомы: {r.details.symptomCount} из 13 · совпадение по времени: {r.details.coOccurred ? "да" : "нет"} · влияние на жизнь: {r.details.impact}/3.</p>
-              </div>
-            )}
-
-            <div
-              className="rounded-xl border p-4"
-              style={{
-                borderColor: `color-mix(in srgb, ${color} 35%, transparent)`,
-                backgroundColor: `color-mix(in srgb, ${color} 10%, transparent)`,
-              }}
-            >
-              <p className="font-semibold" style={{ color }}>
-                {r.label}
-              </p>
-              {r.advice && <p className="mt-1 text-sm text-foreground/80">{r.advice}</p>}
-            </div>
-
-            {r.crisisDetected && (
-              <div className="flex flex-col gap-2 rounded-xl border border-orange-300 bg-orange-50 p-4 text-sm text-orange-900 dark:border-orange-800 dark:bg-orange-950/40 dark:text-orange-200">
+            {result.crisisDetected && (
+              <div className="flex flex-col gap-2 rounded-xl border border-attention/40 bg-attention-surface p-4 text-sm text-attention-foreground">
                 <div className="flex items-center gap-2 font-semibold">
-                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTriangle aria-hidden="true" className="h-4 w-4" />
                   Ответ требует внимания
                 </div>
                 <p>
@@ -198,66 +185,101 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
                 </Button>
               </div>
             )}
-
-            <div className="no-print grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <Button variant="outline" onClick={copyResult}>
-                <Copy className="h-4 w-4" />
-                Скопировать текстом
-              </Button>
-              <Button variant="outline" onClick={downloadTxt}>
-                <Download className="h-4 w-4" />
-                Скачать .txt
-              </Button>
-              <Button variant="outline" onClick={() => window.print()}>
-                <Printer className="h-4 w-4" />
-                Печать отчёта
-              </Button>
-            </div>
-
-            <p className="rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground">
-              Это результат самонаблюдения, а не медицинский диагноз. Обсудите его с врачом или
-              психотерапевтом. Результат сохранён в вашем браузере.
-            </p>
           </CardContent>
         </Card>
 
-        <div className="no-print flex gap-2">
-          <Button variant="outline" onClick={restart} className="flex-1">
-            <RotateCcw className="h-4 w-4" />
-            Пройти заново
+        <div className="no-print space-y-2">
+          <Button onClick={copyResult} className="w-full">
+            <Copy aria-hidden="true" className="h-4 w-4" />
+            Скопировать текстом
           </Button>
-          <Button onClick={() => navigateToView("tests")} className="flex-1">
-            К списку тестов
-          </Button>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <Button variant="outline" onClick={downloadTxt}>
+              <Download aria-hidden="true" className="h-4 w-4" />
+              Скачать .txt
+            </Button>
+            <Button variant="outline" onClick={() => window.print()}>
+              <Printer aria-hidden="true" className="h-4 w-4" />
+              Печать отчёта
+            </Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={restart}>
+              <RotateCcw aria-hidden="true" className="h-4 w-4" />
+              Пройти заново
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <AppLink path={`/results?open=${id}`}>
+                <History aria-hidden="true" className="h-4 w-4" />
+                Открыть в истории
+              </AppLink>
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <AppLink path="/tests">
+                <ClipboardList aria-hidden="true" className="h-4 w-4" />
+                К каталогу тестов
+              </AppLink>
+            </Button>
+          </div>
         </div>
+
+        <p className="rounded-xl bg-muted/50 p-4 text-xs leading-relaxed text-muted-foreground">
+          Это результат самонаблюдения, а не медицинский диагноз. Обсудите его с врачом или
+          психотерапевтом. Результат сохранён в вашем браузере.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
-      <div className="flex items-center justify-between gap-2">
-        <Button variant="ghost" size="sm" onClick={() => navigateToView("tests")}>
-          <ArrowLeft className="h-4 w-4" />
+    <div className="mx-auto max-w-2xl space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lg font-semibold leading-tight">{def.name}</h1>
+          <p className="mt-1 text-sm leading-snug text-muted-foreground">{def.timeframe}</p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => navigateToView("tests")} className="shrink-0">
+          <X aria-hidden="true" className="h-4 w-4" />
           Выйти
         </Button>
-        <span className="text-sm text-muted-foreground">
-          {current + 1} / {total}
-        </span>
       </div>
 
-      <Progress value={progress} className="h-1.5" />
+      <div className="space-y-2">
+        <div
+          role="progressbar"
+          aria-label="Прогресс по вопросам"
+          aria-valuemin={0}
+          aria-valuemax={total}
+          aria-valuenow={answeredCount}
+          aria-valuetext={`Отвечено ${answeredCount} из ${total}`}
+          className="flex items-center gap-1"
+        >
+          {Array.from({ length: total }, (_, index) => (
+            <span
+              key={index}
+              className={cn(
+                "h-1.5 flex-1 rounded-full transition-colors",
+                index === current ? "bg-primary" : answers[index] !== undefined ? "bg-primary/50" : "bg-muted",
+              )}
+            />
+          ))}
+        </div>
+        <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
+          <span className="tabular-nums">{current + 1} / {total}</span>
+          <span className="tabular-nums">Отвечено: {answeredCount}</span>
+        </div>
+      </div>
 
       <Card className="py-6">
-        <CardContent className="space-y-5 px-6">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{def.name}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{def.timeframe}</p>
-          </div>
-
+        <CardContent className="space-y-5">
           <p className="text-lg font-semibold leading-relaxed">{def.questions[current]}</p>
 
-          <div role="radiogroup" className="space-y-2" aria-label={def.questions[current]} aria-busy={!isHydrated}>
+          <div
+            role="radiogroup"
+            aria-label={def.questions[current]}
+            aria-busy={!isHydrated}
+            className="space-y-2"
+          >
             {getOptions(def, current).map((opt) => {
               const selected = value === opt.value;
               return (
@@ -268,39 +290,55 @@ export function TestRunnerView({ codeOverride }: { codeOverride?: string }) {
                   aria-checked={selected}
                   disabled={!isHydrated}
                   onClick={() => selectAnswer(opt.value)}
-                  className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition hover:bg-accent ${
-                    selected ? "border-primary bg-primary/5 ring-1 ring-primary/30" : ""
-                  }`}
+                  className={cn(
+                    "flex w-full items-start gap-3 rounded-xl border p-3.5 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    selected
+                      ? "border-primary bg-primary/10 ring-1 ring-primary/40"
+                      : "border-border hover:bg-accent",
+                  )}
                 >
                   <span
-                    className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-                      selected ? "border-primary" : "border-muted-foreground/40"
-                    }`}
+                    className={cn(
+                      "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2",
+                      selected ? "border-primary" : "border-muted-foreground/50",
+                    )}
                   >
-                    {selected && <span className="h-2.5 w-2.5 rounded-full bg-primary" />}
+                    {selected ? <span className="h-2.5 w-2.5 rounded-full bg-primary" /> : null}
                   </span>
-                  <span className="font-normal">{opt.label}</span>
+                  <span className="leading-snug">{opt.label}</span>
+                  {selected ? <Check aria-hidden="true" className="ml-auto h-4 w-4 shrink-0 text-primary" /> : null}
                 </button>
               );
             })}
           </div>
+
+          {isHydrated && value === undefined ? (
+            <p className="text-xs text-muted-foreground">Выберите один вариант, чтобы продолжить.</p>
+          ) : null}
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between gap-2">
-        <Button variant="outline" onClick={() => setCurrent((index) => Math.max(0, index - 1))} disabled={!isHydrated || current === 0}>
-          <ArrowLeft className="h-4 w-4" />
+      <div className="no-print sticky bottom-24 z-20 -mx-2 flex items-center justify-between gap-2 rounded-2xl border border-border/70 bg-background/85 p-2 backdrop-blur lg:bottom-4">
+        <Button
+          variant="outline"
+          onClick={() => setCurrent((index) => Math.max(0, index - 1))}
+          disabled={!isHydrated || current === 0}
+        >
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" />
           Назад
         </Button>
         {isLast ? (
           <Button onClick={finish} disabled={!isHydrated || value === undefined}>
-            <Check className="h-4 w-4" />
+            <Check aria-hidden="true" className="h-4 w-4" />
             Завершить
           </Button>
         ) : (
-          <Button onClick={() => setCurrent((index) => Math.min(total - 1, index + 1))} disabled={!isHydrated || value === undefined}>
+          <Button
+            onClick={() => setCurrent((index) => Math.min(total - 1, index + 1))}
+            disabled={!isHydrated || value === undefined}
+          >
             Далее
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Button>
         )}
       </div>
