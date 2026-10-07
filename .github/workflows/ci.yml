@@ -57,7 +57,9 @@ jobs:
         run: bun run check:bundle
 
       - name: Dependency audit
-        run: bun audit --audit-level=high
+        # GHSA-vfj7-8cjw-p6xm (braces <=3.0.3) has no patched release yet and only
+        # reaches us through eslint-config-next at lint time. Drop the ignore once fixed.
+        run: bun audit --audit-level=high --ignore=GHSA-vfj7-8cjw-p6xm
 
   e2e:
     needs: checks
