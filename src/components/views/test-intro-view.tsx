@@ -1,22 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, Clock3, ExternalLink, Play, RotateCcw, Users } from "lucide-react";
+import { ArrowLeft, CalendarRange, Clock3, ExternalLink, ListChecks, LockKeyhole, Play, RotateCcw, Users } from "lucide-react";
 import { getTest } from "@/data/tests";
 import { deleteDraft, loadDraft, type TestDraft } from "@/lib/progress";
-import { navigateToTestRun, navigateToView } from "@/lib/navigation";
+import { navigateToTestRun } from "@/lib/navigation";
+import { formatRelativeDay, plural, summarizeResults, type TestSummary } from "@/lib/insights";
+import { loadResultsByCode, severityColor } from "@/lib/results";
+import { recallPeriod } from "@/lib/test-meta";
+import { AppLink } from "@/components/app/app-link";
+import { TestBadgeIcon } from "@/components/app/test-icon";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useConfirm } from "@/components/ui/confirm-dialog";
+
+const backLink =
+  "inline-flex min-h-11 items-center gap-1.5 rounded-lg pr-2 text-sm font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
 export function TestIntroView({ code }: { code: string }) {
   const def = getTest(code);
   const [draft, setDraft] = useState<TestDraft | null>(null);
+  const [summary, setSummary] = useState<TestSummary | null>(null);
+  const [now, setNow] = useState<Date | null>(null);
   const [hydrated, setHydrated] = useState(false);
-  const [confirmingReset, setConfirmingReset] = useState(false);
+  const [confirm, confirmDialog] = useConfirm();
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
+      const current = new Date();
       setDraft(loadDraft(code));
+      setSummary(summarizeResults(loadResultsByCode(code), current)[0] ?? null);
+      setNow(current);
       setHydrated(true);
     }, 0);
     return () => window.clearTimeout(timer);
@@ -25,115 +38,162 @@ export function TestIntroView({ code }: { code: string }) {
   if (!def) {
     return (
       <div className="mx-auto max-w-xl space-y-4">
-        <Button variant="ghost" onClick={() => navigateToView("tests")}><ArrowLeft aria-hidden="true" className="h-4 w-4" /> К каталогу тестов</Button>
-        <p className="text-muted-foreground">Тест не найден.</p>
+        <AppLink path="/tests" className={backLink}><ArrowLeft aria-hidden="true" className="h-4 w-4" /> К каталогу тестов</AppLink>
+        <h1 className="page-title">Тест не найден</h1>
+        <p className="text-muted-foreground">Возможно, ссылка устарела. Выберите методику в каталоге.</p>
       </div>
     );
   }
 
-  const recallPeriod = code === "PSS10" ? "Последний месяц" : code === "ASRS" ? "Последние 6 месяцев" : code === "MDQ" ? "За всю жизнь" : "Последние 2 недели";
   const answeredCount = draft ? Object.keys(draft.answers).length : 0;
+  const questionCount = def.questions.length;
 
-  function start() {
-    navigateToTestRun(code);
-  }
-
-  function resetDraft() {
+  async function resetDraft() {
+    const accepted = await confirm({
+      title: "Начать заново?",
+      description: `Сохранённые ответы (${answeredCount} из ${questionCount}) будут удалены, прохождение начнётся с первого вопроса.`,
+      confirmLabel: "Удалить черновик",
+      destructive: true,
+    });
+    if (!accepted) return;
     deleteDraft(code);
     setDraft(null);
-    setConfirmingReset(false);
   }
 
+  const facts = [
+    { icon: ListChecks, term: "Объём", value: `${questionCount} ${plural(questionCount, ["вопрос", "вопроса", "вопросов"])}` },
+    { icon: Clock3, term: "Время", value: `Около ${def.estimatedMinutes ?? 5} минут` },
+    { icon: CalendarRange, term: "Период вопросов", value: recallPeriod(code) },
+    { icon: Users, term: "Кому подходит", value: def.ageGroup ?? "Уточните у специалиста" },
+  ];
+
   return (
-    <div className="mx-auto max-w-2xl space-y-5">
-      <Button variant="ghost" size="sm" onClick={() => navigateToView("tests")}>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <AppLink path="/tests" className={backLink}>
         <ArrowLeft aria-hidden="true" className="h-4 w-4" /> К каталогу тестов
-      </Button>
-      <Card>
-        <CardHeader>
-          <CardTitle as="h1" className="text-2xl sm:text-3xl">{def.name}</CardTitle>
-          <p className="text-sm leading-relaxed text-muted-foreground">{def.description}</p>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          <dl className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl bg-muted/50 p-3">
-              <Clock3 aria-hidden="true" className="mb-2 h-4 w-4 text-primary" />
-              <dt className="text-xs text-muted-foreground">Время</dt>
-              <dd className="text-sm font-medium tabular-nums">Около {def.estimatedMinutes ?? 5} минут</dd>
+      </AppLink>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
+        <div className="min-w-0 space-y-6">
+          <header className="space-y-4">
+            <TestBadgeIcon code={def.code} size="lg" />
+            <div>
+              <h1 className="page-title">{def.name}</h1>
+              <p className="mt-3 max-w-2xl text-[0.9375rem] leading-relaxed text-muted-foreground">{def.description}</p>
             </div>
-            <div className="rounded-xl bg-muted/50 p-3">
-              <Users aria-hidden="true" className="mb-2 h-4 w-4 text-primary" />
-              <dt className="text-xs text-muted-foreground">Кому подходит</dt>
-              <dd className="text-sm font-medium">{def.ageGroup ?? "Уточните у специалиста"}</dd>
-            </div>
-            <div className="rounded-xl bg-muted/50 p-3">
-              <RotateCcw aria-hidden="true" className="mb-2 h-4 w-4 text-primary" />
-              <dt className="text-xs text-muted-foreground">Период вопросов</dt>
-              <dd className="text-sm font-medium">{recallPeriod}</dd>
-            </div>
+          </header>
+
+          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border/80 bg-border/80">
+            {facts.map((fact) => (
+              <div key={fact.term} className="bg-card p-4">
+                <dt className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <fact.icon aria-hidden="true" className="h-3.5 w-3.5" />
+                  {fact.term}
+                </dt>
+                <dd className="mt-1 text-sm font-medium">{fact.value}</dd>
+              </div>
+            ))}
           </dl>
 
-          <div className="rounded-xl bg-muted/50 p-4 text-sm leading-relaxed text-muted-foreground">
-            Ответы сохраняются только в этом браузере. Если закрыть страницу, незавершённое прохождение можно будет продолжить с последнего вопроса.
-            {code === "MDQ" && " Для MDQ важны не только 13 симптомов: результат также учитывает, совпадали ли они по времени и насколько влияли на жизнь."}
-          </div>
+          <section aria-labelledby="how-heading" className="space-y-2">
+            <h2 id="how-heading" className="font-semibold">Как проходить</h2>
+            <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-muted-foreground marker:text-border">
+              <li>Отвечайте о том, как было на самом деле за указанный период, — правильных ответов нет.</li>
+              <li>Можно вернуться к предыдущему вопросу и изменить ответ. На компьютере можно отвечать клавишами с цифрами.</li>
+              <li>Если закрыть страницу, ответы сохранятся, и можно будет продолжить с того же места.</li>
+              {code === "MDQ" ? (
+                <li>Для MDQ важны не только 13 симптомов: результат также учитывает, совпадали ли они по времени и насколько влияли на жизнь.</li>
+              ) : null}
+            </ul>
+          </section>
 
-          <div className="rounded-xl bg-muted/50 p-4 text-sm">
-            <h2 className="font-medium">Источник и версия</h2>
-            <a href={def.sourceInfo.url} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-              {def.sourceInfo.title}<ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
+          <section aria-labelledby="source-heading" className="rounded-2xl border border-border/70 bg-surface p-4 text-sm sm:p-5">
+            <h2 id="source-heading" className="font-semibold">Источник и версия</h2>
+            <a
+              href={def.sourceInfo.url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1.5 inline-flex items-center gap-1 text-primary underline underline-offset-4"
+            >
+              {def.sourceInfo.title}
+              <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
+              <span className="sr-only">(откроется в новой вкладке)</span>
             </a>
             <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{def.sourceInfo.version}. {def.sourceInfo.translation}</p>
             {code === "PSS10" && <p className="mt-2 text-xs leading-relaxed text-muted-foreground">У PSS-10 нет универсальных диагностических порогов: используйте сумму только как наблюдение, не как оценку нормы.</p>}
             {code === "WHO5" && <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Порог сырого балла ниже 13 предложен WHO для дальнейшей оценки; он не подтверждает и не исключает диагноз.</p>}
+          </section>
+        </div>
+
+        <aside aria-label="Прохождение" className="space-y-4 lg:sticky lg:top-20">
+          <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-card">
+            {/* Черновик известен только в браузере: до гидратации — нейтральный placeholder,
+                чтобы кнопка не мигала «Начать тест» → «Продолжить прохождение». */}
+            {!hydrated ? (
+              <div aria-hidden="true" className="space-y-3">
+                <div className="h-4 w-2/3 animate-pulse rounded-md bg-muted/60" />
+                <div className="h-11 w-full animate-pulse rounded-xl bg-muted/70" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {draft ? (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Прохождение сохранено</p>
+                    <div aria-hidden="true" className="h-1.5 overflow-hidden rounded-full bg-muted">
+                      <div className="h-full rounded-full bg-primary" style={{ width: `${(answeredCount / questionCount) * 100}%` }} />
+                    </div>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      Вы остановились на вопросе <span className="tabular-nums">{draft.current + 1}</span> из{" "}
+                      <span className="tabular-nums">{questionCount}</span>, отвечено{" "}
+                      <span className="tabular-nums">{answeredCount}</span>. Черновик обновлён{" "}
+                      {now ? formatRelativeDay(draft.updatedAt, now) : ""}.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {questionCount} {plural(questionCount, ["вопрос", "вопроса", "вопросов"])}, около {def.estimatedMinutes ?? 5} минут. Можно прерваться в любой момент.
+                  </p>
+                )}
+                <div className="flex flex-col gap-2">
+                  <Button size="lg" onClick={() => navigateToTestRun(code)} className="w-full">
+                    <Play aria-hidden="true" className="h-4 w-4" />
+                    {draft ? "Продолжить прохождение" : "Начать тест"}
+                  </Button>
+                  {draft ? (
+                    <Button variant="outline" onClick={resetDraft} className="w-full">
+                      <RotateCcw aria-hidden="true" className="h-4 w-4" />
+                      Начать заново
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            )}
+            <p className="mt-4 flex items-start gap-2 border-t border-border/60 pt-4 text-xs leading-relaxed text-muted-foreground">
+              <LockKeyhole aria-hidden="true" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              Ответы сохраняются только в этом браузере и никуда не отправляются.
+            </p>
           </div>
 
-          {/* Состояние черновика известно только в браузере: до гидратации
-              показываем нейтральный placeholder, чтобы кнопка не мигала
-              «Начать тест» → «Продолжить прохождение». */}
-          {!hydrated ? (
-            <div aria-hidden="true" className="space-y-2">
-              <div className="h-11 w-full animate-pulse rounded-xl bg-muted/70" />
-              <div className="h-4 w-2/3 animate-pulse rounded-md bg-muted/60" />
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {draft ? (
-                <p className="rounded-xl border border-primary/25 bg-primary/5 p-3 text-sm leading-relaxed">
-                  <span className="font-medium">Прохождение сохранено.</span>{" "}
-                  Вы остановились на вопросе <span className="tabular-nums">{draft.current + 1}</span> из{" "}
-                  <span className="tabular-nums">{def.questions.length}</span>, отвечено{" "}
-                  <span className="tabular-nums">{answeredCount}</span>. Черновик обновлён{" "}
-                  <span className="tabular-nums">{new Date(draft.updatedAt).toLocaleString("ru-RU")}</span>.
-                </p>
-              ) : null}
-
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button onClick={start} className="flex-1">
-                  <Play aria-hidden="true" className="h-4 w-4" />
-                  {draft ? "Продолжить прохождение" : "Начать тест"}
-                </Button>
-                {draft && !confirmingReset ? (
-                  <Button variant="outline" onClick={() => setConfirmingReset(true)}>
-                    <RotateCcw aria-hidden="true" className="h-4 w-4" />
-                    Начать заново
-                  </Button>
-                ) : null}
-              </div>
-
-              {draft && confirmingReset ? (
-                <div className="flex flex-col gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm">Удалить сохранённые ответы и начать с первого вопроса?</p>
-                  <div className="flex gap-2">
-                    <Button variant="destructive" size="sm" onClick={resetDraft}>Удалить черновик</Button>
-                    <Button variant="ghost" size="sm" onClick={() => setConfirmingReset(false)}>Отмена</Button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          {hydrated && summary?.latestComplete && now ? (
+            <AppLink
+              path={`/results?open=${encodeURIComponent(summary.latestComplete.id)}`}
+              className="block rounded-2xl border border-border/70 bg-surface p-4 text-sm transition hover:border-primary/40"
+            >
+              <span className="text-xs text-muted-foreground">Прошлый результат · {formatRelativeDay(summary.latestComplete.dateISO, now)}</span>
+              <span className="mt-1 flex items-start gap-2 font-medium">
+                <span aria-hidden="true" className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: severityColor(summary.latestComplete.severity) }} />
+                <span>
+                  <span className="tabular-nums">{summary.latestComplete.totalScore} из {summary.latestComplete.maxScore}</span> · {summary.latestComplete.label}
+                </span>
+              </span>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                {summary.count} {plural(summary.count, ["запись", "записи", "записей"])} в истории · {def.periodicity}
+              </span>
+            </AppLink>
+          ) : null}
+        </aside>
+      </div>
+      {confirmDialog}
     </div>
   );
 }

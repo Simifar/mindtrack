@@ -5,6 +5,7 @@ import { navigateToView } from "@/lib/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PageHeader } from "@/components/app/page-header";
 
 export function MethodsView() {
   return (
@@ -13,12 +14,11 @@ export function MethodsView() {
         <ArrowLeft className="h-4 w-4" /> К каталогу тестов
       </Button>
 
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">О методиках и ограничениях</h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          MindTrack показывает результаты скрининговых опросников для самонаблюдения. Скрининг не подтверждает и не исключает диагноз и не заменяет разговор с врачом или психологом.
-        </p>
-      </div>
+      <PageHeader
+        eyebrow="Методики"
+        title="О методиках и ограничениях"
+        description="MindTrack показывает результаты скрининговых опросников для самонаблюдения. Скрининг не подтверждает и не исключает диагноз и не заменяет разговор с врачом или психологом."
+      />
 
       <Card>
         <CardHeader><CardTitle className="text-lg">Как читать результат</CardTitle></CardHeader>

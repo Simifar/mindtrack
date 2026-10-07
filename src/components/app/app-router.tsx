@@ -2,6 +2,7 @@
 import { usePathname } from "next/navigation";
 import { AppShell } from "@/components/app/app-shell";
 import { routeFromPath } from "@/lib/routes";
+import { HomeView } from "@/components/views/home-view";
 import { TestsView } from "@/components/views/tests-view";
 import { TestIntroView } from "@/components/views/test-intro-view";
 import { TestRunnerView } from "@/components/views/test-runner-view";
@@ -18,6 +19,7 @@ export function AppRouter() {
 
   return (
     <AppShell>
+      {route.view === "home" && <HomeView />}
       {route.view === "tests" && <TestsView />}
       {route.view === "test-detail" && route.code && <TestIntroView code={route.code} />}
       {route.view === "test-run" && route.code && <TestRunnerView codeOverride={route.code} key={route.code} />}

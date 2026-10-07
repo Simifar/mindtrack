@@ -67,6 +67,8 @@
     "minimatch": "3.1.5",
     "picomatch": "2.3.2",
     "@babel/core": "7.29.6",
-    "@humanfs/node": "0.16.8"
+    "@humanfs/node": "0.16.8",
+    "sharp": "0.35.5",
+    "source-map-js": "1.2.2"
   }
 }

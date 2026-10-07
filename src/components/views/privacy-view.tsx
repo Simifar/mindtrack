@@ -3,15 +3,24 @@
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { AppLink } from "@/components/app/app-link";
+import { PageHeader } from "@/components/app/page-header";
 import { useToast } from "@/hooks/use-toast";
 import { clearMindTrackData } from "@/lib/local-data";
 
 export function PrivacyView() {
   const { toast } = useToast();
+  const [confirm, confirmDialog] = useConfirm();
 
-  function clearAll() {
-    if (!window.confirm("Удалить результаты, черновики, записи дневника и сводку к врачу из этого браузера? Это нельзя отменить.")) return;
+  async function clearAll() {
+    const accepted = await confirm({
+      title: "Удалить все данные MindTrack?",
+      description: "Результаты, черновики, записи дневника и сводка к врачу будут удалены из этого браузера. Это нельзя отменить.",
+      confirmLabel: "Удалить всё",
+      destructive: true,
+    });
+    if (!accepted) return;
     const { failed } = clearMindTrackData();
     if (failed === 0) {
       toast({ title: "Данные MindTrack удалены из этого браузера" });
@@ -27,10 +36,11 @@ export function PrivacyView() {
           <ArrowLeft aria-hidden="true" className="h-4 w-4" /> К каталогу тестов
         </AppLink>
       </Button>
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Приватность</h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">MindTrack работает без регистрации и серверного хранения ответов.</p>
-      </header>
+      <PageHeader
+        eyebrow="Данные"
+        title="Приватность"
+        description="MindTrack работает без регистрации и серверного хранения ответов."
+      />
       <Card>
         <CardHeader><CardTitle as="h2" className="text-lg">Что хранится в браузере</CardTitle></CardHeader>
         <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
@@ -52,6 +62,7 @@ export function PrivacyView() {
           <p>Это не медицинское ПО. Результаты не являются диагнозом и не заменяют консультацию специалиста.</p>
         </CardContent>
       </Card>
+      {confirmDialog}
     </div>
   );
 }

@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import { BookHeart, Download, Printer, Save, Trash2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useConfirm } from "@/components/ui/confirm-dialog";
+import { PageHeader } from "@/components/app/page-header";
+import { TrendChart } from "@/components/app/trend-chart";
 import { RangeField, TextField, fieldClass } from "@/components/ui/field";
 import { useToast } from "@/hooks/use-toast";
 import { useAppStore } from "@/store/app-store";
@@ -78,6 +81,7 @@ export function DiaryView() {
   const [lastDeleted, setLastDeleted] = useState<DiaryEntry | null>(null);
   const draftEditedRef = useRef(false);
   const editedFieldsRef = useRef(new Set<keyof DiaryForm>());
+  const [confirm, confirmDialog] = useConfirm();
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -168,8 +172,14 @@ export function DiaryView() {
     if (crisis.shouldOpenDialog) setCrisisOpen(true);
   }
 
-  function discardDraft() {
-    if (!window.confirm("Удалить незаписанный черновик дневника? Сохранённые записи останутся.")) return;
+  async function discardDraft() {
+    const accepted = await confirm({
+      title: "Удалить черновик?",
+      description: "Незаписанные изменения в форме будут удалены. Сохранённые записи останутся.",
+      confirmLabel: "Удалить черновик",
+      destructive: true,
+    });
+    if (!accepted) return;
     try {
       clearDiaryDraft();
       draftEditedRef.current = false;
@@ -217,19 +227,28 @@ export function DiaryView() {
   }
 
   const visibleEntries = showAll ? entries : entries.slice(0, ENTRY_LIMIT);
+  // Для графика берём последнюю запись за каждый день, от старых к новым.
+  const moodByDay = new Map<string, DiaryEntry>();
+  for (const entry of entries) if (!moodByDay.has(entry.date)) moodByDay.set(entry.date, entry);
+  const moodPoints = Array.from(moodByDay.values())
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-30)
+    .map((entry) => ({ id: entry.id, dateISO: `${entry.date}T12:00:00`, value: entry.mood }));
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Дневник состояния</h1>
-        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-          Настроение, сон, активность и факторы дня — чтобы обсуждать динамику со специалистом.
-        </p>
-      </header>
-
-      <p className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm leading-relaxed text-muted-foreground">
-        Шкалы 0–10 — способ заметить изменения, а не диагноз и не оценка «правильности» состояния. Незаписанный текст сохраняется в этом браузере; отдельную запись создаёт кнопка ниже.
-      </p>
+      <PageHeader
+        eyebrow="Самонаблюдение"
+        title="Дневник состояния"
+        description={
+          <>
+            <p>Настроение, сон, активность и факторы дня — чтобы обсуждать динамику со специалистом.</p>
+            <p className="mt-2 text-sm">
+              Шкалы 0–10 — способ заметить изменения, а не диагноз и не оценка «правильности» состояния. Незаписанный текст сохраняется в этом браузере; отдельную запись создаёт кнопка «Сохранить запись».
+            </p>
+          </>
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -280,20 +299,20 @@ export function DiaryView() {
           </div>
           <TextField label="Комментарий" value={form.notes} onChange={(value) => update("notes", value)} placeholder="Дополнительные детали для обсуждения с врачом" />
 
-          <div className="no-print sticky bottom-24 z-20 -mx-2 flex flex-wrap items-center gap-2 rounded-2xl border border-border/70 bg-background/85 p-2 backdrop-blur lg:bottom-4">
-            <Button onClick={save}>
-              <Save aria-hidden="true" className="h-4 w-4" /> Сохранить запись
+          <div className="no-print action-dock sticky z-20 -mx-2 flex flex-wrap items-center gap-2 rounded-2xl border border-border/70 bg-background/90 p-2 shadow-raised backdrop-blur">
+            <Button onClick={save} aria-label="Сохранить запись">
+              <Save aria-hidden="true" className="h-4 w-4" /> Сохранить<span className="hidden sm:inline">&nbsp;запись</span>
             </Button>
             {draftStatus !== "empty" && draftStatus !== "loading" ? (
-              <Button variant="outline" onClick={discardDraft}>
-                <Trash2 aria-hidden="true" className="h-4 w-4" /> Удалить черновик
+              <Button variant="outline" className="min-w-11" title="Удалить черновик" onClick={discardDraft}>
+                <Trash2 aria-hidden="true" className="h-4 w-4" /> <span className="sr-only sm:not-sr-only">Удалить черновик</span>
               </Button>
             ) : null}
-            <Button variant="ghost" size="sm" onClick={downloadJson}>
-              <Download aria-hidden="true" className="h-4 w-4" /> Экспорт JSON
+            <Button variant="ghost" className="min-w-11" title="Экспорт JSON" onClick={downloadJson}>
+              <Download aria-hidden="true" className="h-4 w-4" /> <span className="sr-only sm:not-sr-only">Экспорт JSON</span>
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => window.print()}>
-              <Printer aria-hidden="true" className="h-4 w-4" /> Печать
+            <Button variant="ghost" className="min-w-11" title="Печать" onClick={() => window.print()}>
+              <Printer aria-hidden="true" className="h-4 w-4" /> <span className="sr-only sm:not-sr-only">Печать</span>
             </Button>
             <span aria-hidden="true" className="ml-auto hidden text-xs text-muted-foreground sm:block">
               {DRAFT_STATUS_TEXT[draftStatus]}
@@ -314,6 +333,13 @@ export function DiaryView() {
           ) : null}
         </CardHeader>
         <CardContent className="space-y-3">
+          {moodPoints.length >= 2 ? (
+            <div className="rounded-xl bg-surface p-4">
+              <p className="mb-3 text-sm font-medium">Настроение по дням</p>
+              <TrendChart title="Настроение по дням, шкала 0–10" points={moodPoints} max={10} unit="по шкале настроения" />
+            </div>
+          ) : null}
+
           {lastDeleted ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/50 p-3 text-sm">
               <span>Запись удалена.</span>
@@ -382,6 +408,7 @@ export function DiaryView() {
           ) : null}
         </CardContent>
       </Card>
+      {confirmDialog}
     </div>
   );
 }

@@ -134,8 +134,8 @@ test.describe("MindTrack critical browser flows", () => {
     const diaryNotes = page.locator('textarea[placeholder="Дополнительные детали для обсуждения с врачом"]');
     await expect(diaryNotes).toBeEnabled({ timeout: 10_000 });
     await expect(diaryNotes).toHaveValue("unfinished diary draft", { timeout: 10_000 });
-    page.once("dialog", (dialog) => dialog.accept());
     await page.getByRole("button", { name: "Удалить черновик", exact: true }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Удалить черновик", exact: true }).click();
     await expect(page.getByLabel("Комментарий", { exact: true })).toHaveValue("");
 
     await gotoPath(page, "/visit");
@@ -146,8 +146,8 @@ test.describe("MindTrack critical browser flows", () => {
     await page.reload();
     await expect(priorityField).toBeEnabled({ timeout: 10_000 });
     await expect(priorityField).toHaveValue("unfinished appointment draft", { timeout: 10_000 });
-    page.once("dialog", (dialog) => dialog.accept());
     await page.getByRole("button", { name: "Удалить черновик", exact: true }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Удалить черновик", exact: true }).click();
     await expect(priorityField).toHaveValue("");
   });
 
@@ -169,8 +169,8 @@ test.describe("MindTrack critical browser flows", () => {
       localStorage.setItem("another-app:data", "keep");
     });
     await gotoPath(page, "/privacy");
-    page.once("dialog", (dialog) => dialog.accept());
     await page.getByRole("button", { name: "Удалить все данные MindTrack", exact: true }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Удалить всё", exact: true }).click();
     await expect(page.getByText("Данные MindTrack удалены из этого браузера", { exact: true })).toBeVisible();
     const values = await page.evaluate(() => ({
       results: localStorage.getItem("mindtrack:results:v2"),
@@ -192,16 +192,15 @@ test.describe("MindTrack critical browser flows", () => {
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toMatch(/mindtrack-results-.*\.json/);
 
-    let confirmation = "";
-    page.once("dialog", async (dialog) => {
-      confirmation = dialog.message();
-      await dialog.dismiss();
-    });
     await page.getByRole("button", { name: "Очистить всё", exact: true }).click();
-    expect(confirmation).toContain("Удалить всю историю результатов");
+    const confirmation = page.getByRole("alertdialog");
+    await expect(confirmation).toContainText("Удалить всю историю результатов");
+    await confirmation.getByRole("button", { name: "Отмена", exact: true }).click();
+    await expect(confirmation).toBeHidden();
     await expect(page.getByText("PHQ-9 — шкала депрессии", { exact: true }).first()).toBeVisible();
 
     await page.getByRole("button", { name: "Удалить результат", exact: true }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Удалить", exact: true }).click();
     await expect(page.getByText("PHQ-9 — шкала депрессии", { exact: true })).toHaveCount(0);
   });
 
@@ -234,8 +233,8 @@ test.describe("MindTrack critical browser flows", () => {
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expect(saveButton).toBeFocused();
-    page.once("dialog", (confirm) => confirm.accept());
     await page.getByRole("button", { name: "Удалить сводку", exact: true }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Удалить сводку", exact: true }).click();
     await expect(safetyField).toHaveValue("");
   });
 
@@ -357,7 +356,7 @@ test.describe("MindTrack critical browser flows", () => {
         await expect(navigation).toBeHidden();
         continue;
       }
-      await expect(navigation.locator('[aria-current="page"]')).toHaveText("Результаты");
+      await expect(navigation.locator('[aria-current="page"]')).toHaveText("История");
 
       const geometry = await navigation.evaluate((element) => {
         const rect = element.getBoundingClientRect();
@@ -424,11 +423,11 @@ test.describe("MindTrack critical browser flows", () => {
 
     await page.setViewportSize({ width: 390, height: 844 });
     const routes = [
+      ["Главная", "/"],
       ["Тесты", "/tests"],
       ["Дневник", "/diary"],
       ["К врачу", "/visit"],
-      ["Результаты", "/results"],
-      ["Методики", "/about"],
+      ["История", "/results"],
     ] as const;
 
     for (const [label, route] of routes) {
@@ -466,7 +465,7 @@ test.describe("MindTrack critical browser flows", () => {
 
   test("homepage exposes basic Web Vitals timing", async ({ page }) => {
     await gotoPath(page, "/");
-    await expect(page.getByRole("heading", { name: "Каталог тестов" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Как вы сегодня?" })).toBeVisible();
     const metrics = await page.evaluate(() => {
       const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
       const lcp = performance.getEntriesByType("largest-contentful-paint").at(-1)?.startTime ?? null;

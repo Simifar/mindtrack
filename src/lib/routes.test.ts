@@ -9,7 +9,9 @@ describe("MindTrack routes", () => {
   });
 
   it("parses catalog, detail, runner and utility paths", () => {
-    expect(routeFromPath("/")).toEqual({ view: "tests", code: null });
+    expect(routeFromPath("/")).toEqual({ view: "home", code: null });
+    expect(routeFromPath("/tests/")).toEqual({ view: "tests", code: null });
+    expect(routeFromPath("/tests/unknown")).toEqual({ view: "tests", code: null });
     expect(routeFromPath("/tests/gad-7")).toEqual({ view: "test-detail", code: "GAD7" });
     expect(routeFromPath("/tests/gad-7/run/")).toEqual({ view: "test-run", code: "GAD7" });
     expect(routeFromPath("/results")).toEqual({ view: "results", code: null });
@@ -22,6 +24,7 @@ describe("MindTrack routes", () => {
     expect(pathForView("test-detail", "ISI")).toBe("/tests/isi");
     expect(pathForView("test-run", "ISI")).toBe("/tests/isi/run");
     expect(pathForView("methods", null)).toBe("/about");
+    expect(pathForView("home", null)).toBe("/");
     expect(pathForView("diary", null)).toBe("/diary");
     expect(pathForView("visit", null)).toBe("/visit");
   });
