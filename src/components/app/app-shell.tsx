@@ -1,5 +1,5 @@
 "use client";
-import { BookHeart, ClipboardList, ClipboardPenLine, History, Info, LifeBuoy } from "lucide-react";
+import { BookHeart, ClipboardList, ClipboardPenLine, History, House, Info, LifeBuoy } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { pathForView, routeFromPath, type ViewId } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -10,27 +10,33 @@ import { MindTrackMark } from "./mindtrack-logo";
 import { AppLink } from "./app-link";
 
 const NAV: { id: ViewId; label: string; icon: typeof ClipboardList }[] = [
+  { id: "home", label: "Главная", icon: House },
   { id: "tests", label: "Тесты", icon: ClipboardList },
   { id: "diary", label: "Дневник", icon: BookHeart },
   { id: "visit", label: "К врачу", icon: ClipboardPenLine },
-  { id: "results", label: "Результаты", icon: History },
+  { id: "results", label: "История", icon: History },
   { id: "methods", label: "Методики", icon: Info },
 ];
 
-/** Группы рейла: тот же состав и те же подписи, но с читаемой структурой. */
+/** Нижняя панель вмещает пять пунктов; «Методики» доступны из рейла, футера и страниц тестов. */
+const MOBILE_NAV: ViewId[] = ["home", "tests", "diary", "visit", "results"];
+
+/** Группы рейла: обзор, действия, собственные записи и справка. */
 const NAV_GROUPS: { title: string; ids: ViewId[] }[] = [
+  { title: "Обзор", ids: ["home"] },
   { title: "Пройти", ids: ["tests"] },
   { title: "Мои данные", ids: ["diary", "visit", "results"] },
   { title: "Справка", ids: ["methods"] },
 ];
 
 const VIEW_TITLES: Record<ViewId, string> = {
+  home: "Главная",
   tests: "Каталог тестов",
   "test-detail": "Тесты",
   "test-run": "Тесты",
   diary: "Дневник состояния",
   visit: "Подготовка к приёму",
-  results: "Результаты",
+  results: "История результатов",
   methods: "О методиках и ограничениях",
   help: "Помощь",
   privacy: "Приватность",
@@ -44,8 +50,8 @@ const VIEW_TITLES: Record<ViewId, string> = {
 function Logo() {
   return (
     <AppLink
-      path="/tests"
-      aria-label="MindTrack — к каталогу тестов"
+      path="/"
+      aria-label="MindTrack — на главную"
       className="flex w-fit items-center gap-3 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring"
     >
       <MindTrackMark className="h-10 w-10 shrink-0 rounded-xl" />
@@ -68,7 +74,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="app-shell flex min-h-screen bg-background">
       <a href="#main-content" className="skip-link">К основному содержимому</a>
       {/* Десктоп: левый sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-[17rem] shrink-0 flex-col border-r border-border/80 bg-card/75 backdrop-blur lg:flex">
+      <aside className="no-print sticky top-0 hidden h-screen w-[16.5rem] shrink-0 flex-col border-r border-border/70 bg-surface/60 lg:flex">
         <div className="px-6 py-6">
           <Logo />
         </div>
@@ -92,7 +98,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     className={cn(
                       "relative flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                       isActive
-                        ? "bg-primary/10 font-semibold text-foreground before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-primary"
+                        ? "bg-card font-semibold text-foreground shadow-card before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-full before:bg-primary"
                         : "font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                     )}
                   >
@@ -105,7 +111,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="space-y-3 px-5 pb-5">
-          <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4 text-xs leading-relaxed text-muted-foreground">
+          <div className="rounded-2xl border border-border/80 bg-card p-4 text-xs leading-relaxed text-muted-foreground">
             <p className="font-medium text-foreground">Только на этом устройстве</p>
             <p className="mt-1">Без аккаунта и отправки ответов на сервер.</p>
           </div>
@@ -127,7 +133,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Основная колонка */}
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         {/* Мобильный top-bar */}
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border/80 bg-card/90 px-4 py-3 backdrop-blur lg:hidden">
+        <header className="no-print sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border/70 bg-background/85 px-4 py-2.5 backdrop-blur lg:hidden">
           <Logo />
           <div className="flex items-center gap-1">
             <AppLink
@@ -142,12 +148,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Десктопная шапка: раздел виден и после прокрутки страницы */}
-        <header className="sticky top-0 z-30 hidden items-center justify-between gap-3 border-b border-border/80 bg-card/85 px-8 py-3 backdrop-blur lg:flex">
+        <header className="no-print sticky top-0 z-30 hidden items-center justify-between gap-3 border-b border-border/70 bg-background/85 px-10 py-2.5 backdrop-blur lg:flex">
           <p className="truncate text-xs font-medium text-muted-foreground">{sectionTitle}</p>
           <ThemeToggle />
         </header>
 
-        <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 pb-10 pt-7 sm:px-7 sm:pt-9 lg:px-10 lg:pb-10">{children}</main>
+        <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 pb-12 pt-6 outline-none sm:px-7 sm:pt-9 lg:px-10">{children}</main>
 
         <DisclaimerFooter />
       </div>
@@ -155,7 +161,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Основная навигация: плавающая панель для мобильных и планшетных экранов. */}
       <nav aria-label="Основная навигация" className="bottom-nav fixed z-40 backdrop-blur-xl backdrop-saturate-150 lg:hidden">
         <div className="grid grid-cols-5 gap-1 p-1.5">
-          {NAV.map((item) => {
+          {MOBILE_NAV.map((id) => {
+            const item = NAV.find((entry) => entry.id === id);
+            if (!item) return null;
             const Icon = item.icon;
             const isActive = active(item.id);
             const path = pathForView(item.id, null);

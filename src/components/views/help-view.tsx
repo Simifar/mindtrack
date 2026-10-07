@@ -5,6 +5,7 @@ import { CRISIS_RESOURCES } from "@/lib/crisis";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AppLink } from "@/components/app/app-link";
+import { PageHeader } from "@/components/app/page-header";
 
 export function HelpView() {
   return (
@@ -15,12 +16,11 @@ export function HelpView() {
         </AppLink>
       </Button>
 
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Помощь</h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          Если вам тяжело, выберите подходящий ресурс. MindTrack не оценивает непосредственный риск.
-        </p>
-      </header>
+      <PageHeader
+        eyebrow="Поддержка"
+        title="Помощь"
+        description="Если вам тяжело, выберите подходящий ресурс. MindTrack не оценивает непосредственный риск."
+      />
 
       <section
         aria-labelledby="urgent-help"

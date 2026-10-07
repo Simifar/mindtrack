@@ -38,6 +38,9 @@
   --color-sev-moderate: var(--sev-moderate);
   --color-sev-severe: var(--sev-severe);
   --color-sev-neutral: var(--sev-neutral);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-primary-soft: var(--primary-soft);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -45,26 +48,30 @@
 }
 
 :root {
-  --radius: 0.9rem;
-  --background: oklch(0.978 0.012 88);
-  --foreground: oklch(0.24 0.018 74);
-  --card: oklch(0.997 0.004 90);
-  --card-foreground: oklch(0.24 0.018 74);
-  --popover: oklch(0.997 0.004 90);
-  --popover-foreground: oklch(0.24 0.018 74);
-  --primary: oklch(0.45 0.09 169);
-  --primary-foreground: oklch(0.99 0.008 92);
-  --secondary: oklch(0.935 0.025 160);
-  --secondary-foreground: oklch(0.32 0.045 160);
-  --muted: oklch(0.95 0.012 84);
-  --muted-foreground: oklch(0.48 0.022 76);
-  --accent: oklch(0.935 0.03 158);
-  --accent-foreground: oklch(0.29 0.045 160);
+  --radius: 0.875rem;
+  /* Тёплая бумага: фон чуть темнее карточек, «утопленные» зоны ещё темнее. */
+  --background: oklch(0.974 0.009 84);
+  --foreground: oklch(0.225 0.016 70);
+  --card: oklch(0.994 0.004 88);
+  --card-foreground: oklch(0.225 0.016 70);
+  --popover: oklch(0.994 0.004 88);
+  --popover-foreground: oklch(0.225 0.016 70);
+  --surface: oklch(0.952 0.011 82);
+  --surface-foreground: oklch(0.3 0.018 72);
+  --primary: oklch(0.465 0.085 172);
+  --primary-foreground: oklch(0.985 0.008 92);
+  --primary-soft: oklch(0.94 0.03 170);
+  --secondary: oklch(0.935 0.022 165);
+  --secondary-foreground: oklch(0.31 0.045 168);
+  --muted: oklch(0.948 0.01 82);
+  --muted-foreground: oklch(0.47 0.02 72);
+  --accent: oklch(0.94 0.024 165);
+  --accent-foreground: oklch(0.28 0.045 168);
   --destructive: oklch(0.52 0.18 27);
   --destructive-foreground: oklch(0.99 0.008 92);
-  --border: oklch(0.89 0.018 80);
-  --input: oklch(0.87 0.02 80);
-  --ring: oklch(0.45 0.09 169);
+  --border: oklch(0.9 0.013 80);
+  --input: oklch(0.86 0.018 80);
+  --ring: oklch(0.5 0.1 172);
   --chart-1: oklch(0.58 0.18 27);
   --chart-2: oklch(0.53 0.11 153);
   --chart-3: oklch(0.5 0.1 235);
@@ -80,28 +87,34 @@
   --attention: oklch(0.62 0.14 55);
   --attention-foreground: oklch(0.38 0.11 48);
   --attention-surface: oklch(0.96 0.03 75);
+  --shadow-tint: oklch(0.32 0.03 70);
+  --shadow-sm: 0 1px 2px color-mix(in oklab, var(--shadow-tint) 7%, transparent);
+  --shadow-md: 0 1px 2px color-mix(in oklab, var(--shadow-tint) 6%, transparent), 0 8px 24px -12px color-mix(in oklab, var(--shadow-tint) 22%, transparent);
 }
 
 .dark {
-  --background: oklch(0.18 0.014 165);
-  --foreground: oklch(0.94 0.012 92);
-  --card: oklch(0.23 0.018 162);
-  --card-foreground: oklch(0.94 0.012 92);
-  --popover: oklch(0.23 0.018 162);
-  --popover-foreground: oklch(0.94 0.012 92);
-  --primary: oklch(0.72 0.105 164);
-  --primary-foreground: oklch(0.18 0.025 166);
-  --secondary: oklch(0.3 0.025 164);
+  --background: oklch(0.168 0.009 170);
+  --foreground: oklch(0.94 0.01 92);
+  --card: oklch(0.205 0.012 168);
+  --card-foreground: oklch(0.94 0.01 92);
+  --popover: oklch(0.225 0.013 168);
+  --popover-foreground: oklch(0.94 0.01 92);
+  --surface: oklch(0.188 0.011 168);
+  --surface-foreground: oklch(0.86 0.014 95);
+  --primary: oklch(0.76 0.095 168);
+  --primary-foreground: oklch(0.18 0.025 168);
+  --primary-soft: oklch(0.27 0.035 168);
+  --secondary: oklch(0.27 0.022 166);
   --secondary-foreground: oklch(0.91 0.02 95);
-  --muted: oklch(0.28 0.018 162);
-  --muted-foreground: oklch(0.8 0.02 100);
-  --accent: oklch(0.32 0.035 163);
-  --accent-foreground: oklch(0.94 0.012 92);
+  --muted: oklch(0.245 0.013 166);
+  --muted-foreground: oklch(0.76 0.018 100);
+  --accent: oklch(0.27 0.026 166);
+  --accent-foreground: oklch(0.95 0.01 92);
   --destructive: oklch(0.64 0.17 28);
   --destructive-foreground: oklch(0.18 0.02 28);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.72 0.105 164);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.76 0.095 168);
   --chart-1: oklch(0.7 0.16 28);
   --chart-2: oklch(0.74 0.12 155);
   --chart-3: oklch(0.72 0.105 235);
@@ -114,22 +127,38 @@
   --sev-neutral: oklch(0.8 0.02 100);
   --attention: oklch(0.78 0.13 62);
   --attention-foreground: oklch(0.92 0.05 78);
-  --attention-surface: oklch(0.28 0.05 55);
+  --attention-surface: oklch(0.27 0.045 55);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 30%);
+  --shadow-md: 0 1px 2px rgb(0 0 0 / 30%), 0 10px 28px -14px rgb(0 0 0 / 60%);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring;
   }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
   body {
     @apply bg-background text-foreground;
     min-height: 100vh;
     min-height: 100dvh;
+    font-feature-settings: "kern", "calt";
   }
   h1,
   h2,
   h3 {
     text-wrap: balance;
+    letter-spacing: -0.012em;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  a:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
   ::selection {
     @apply bg-primary/20;
@@ -147,7 +176,7 @@
     background: var(--card);
     padding: 0.75rem 1rem;
     color: var(--foreground);
-    box-shadow: 0 4px 20px color-mix(in oklab, oklch(0.3 0.03 70) 16%, transparent);
+    box-shadow: var(--shadow-md);
   }
 
   .skip-link:focus {
@@ -157,35 +186,97 @@
   }
 
   .app-shell {
-    padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+    padding-bottom: calc(6.25rem + env(safe-area-inset-bottom));
   }
 
-  .app-shell main {
-    background-image: radial-gradient(ellipse at top left, color-mix(in oklab, var(--primary) 4%, transparent), transparent 36rem);
+  /* Заголовок страницы: крупный, плотный, без декоративных эффектов. */
+  .page-title {
+    font-size: clamp(1.75rem, 1.35rem + 1.6vw, 2.5rem);
+    line-height: 1.08;
+    font-weight: 650;
+    letter-spacing: -0.028em;
+  }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  /* Крупные числа результата: моноширинные цифры, плотная посадка. */
+  .score-figure {
+    font-variant-numeric: tabular-nums;
+    font-weight: 650;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-sm);
+  }
+
+  .shadow-raised {
+    box-shadow: var(--shadow-md);
   }
 
   .bottom-nav {
     bottom: calc(0.75rem + env(safe-area-inset-bottom));
     left: 0.75rem;
     right: 0.75rem;
-    max-width: 42rem;
+    max-width: 30rem;
     margin-inline: auto;
-    border: 1px solid color-mix(in oklab, var(--border) 78%, transparent);
-    border-radius: 1.75rem;
-    background: color-mix(in oklab, var(--card) 86%, transparent);
-    box-shadow: 0 14px 36px color-mix(in oklab, oklch(0.3 0.03 70) 18%, transparent), 0 3px 10px color-mix(in oklab, oklch(0.3 0.03 70) 10%, transparent);
+    border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+    border-radius: 1.5rem;
+    background: color-mix(in oklab, var(--card) 88%, transparent);
+    box-shadow: 0 14px 36px color-mix(in oklab, var(--shadow-tint) 16%, transparent), 0 2px 8px color-mix(in oklab, var(--shadow-tint) 8%, transparent);
     backdrop-filter: blur(20px) saturate(150%);
     -webkit-backdrop-filter: blur(20px) saturate(150%);
   }
 
   .dark .bottom-nav {
-    box-shadow: 0 14px 36px rgb(0 0 0 / 42%), 0 3px 10px rgb(0 0 0 / 28%);
+    box-shadow: 0 14px 36px rgb(0 0 0 / 45%), 0 2px 8px rgb(0 0 0 / 30%);
+  }
+
+  /* Липкая панель действий формы: над нижней навигацией на мобильных. */
+  .action-dock {
+    bottom: calc(5.75rem + env(safe-area-inset-bottom));
   }
 
   /* Формы помечают незаполненные значения, а не притворяются ответом. */
   .range-value-empty {
     color: var(--muted-foreground);
     font-weight: 400;
+  }
+
+  .animate-rise {
+    animation: rise 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
+  .animate-fade {
+    animation: fade 200ms ease-out both;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
@@ -199,6 +290,10 @@
 @media (min-width: 64rem) {
   .app-shell {
     padding-bottom: 0;
+  }
+
+  .action-dock {
+    bottom: 1rem;
   }
 }
 

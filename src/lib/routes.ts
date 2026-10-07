@@ -1,4 +1,4 @@
-export type ViewId = "tests" | "test-detail" | "test-run" | "diary" | "visit" | "results" | "methods" | "help" | "privacy";
+export type ViewId = "home" | "tests" | "test-detail" | "test-run" | "diary" | "visit" | "results" | "methods" | "help" | "privacy";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
 
@@ -38,6 +38,8 @@ export function navigate(path: string): void {
 
 export function pathForView(view: ViewId, activeTestCode: string | null): string {
   switch (view) {
+    case "home":
+      return "/";
     case "tests":
       return "/tests";
     case "test-detail":
@@ -67,11 +69,12 @@ export function routeFromPath(pathname: string): { view: ViewId; code: string | 
     if (code && parts[2] === "run") return { view: "test-run", code };
     if (code) return { view: "test-detail", code };
   }
+  if (parts[0] === "tests") return { view: "tests", code: null };
   if (parts[0] === "results") return { view: "results", code: null };
   if (parts[0] === "diary") return { view: "diary", code: null };
   if (parts[0] === "visit") return { view: "visit", code: null };
   if (parts[0] === "about") return { view: "methods", code: null };
   if (parts[0] === "help") return { view: "help", code: null };
   if (parts[0] === "privacy") return { view: "privacy", code: null };
-  return { view: "tests", code: null };
+  return { view: "home", code: null };
 }

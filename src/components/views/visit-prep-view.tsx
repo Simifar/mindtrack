@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ClipboardPenLine, Download, Printer, Save, Trash2 } from "lucide-react";
+import { Download, Printer, Save, Trash2 } from "lucide-react";
+import { PageHeader } from "@/components/app/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { TextField, fieldClass } from "@/components/ui/field";
+import { plural } from "@/lib/insights";
 import { useToast } from "@/hooks/use-toast";
 import { getCrisisPolicy } from "@/lib/crisis";
 import { useAppStore } from "@/store/app-store";
@@ -29,6 +32,32 @@ function hasVisitContent(form: VisitPrep): boolean {
 function toVisitDraft(form: VisitPrep): VisitPrepDraft {
   const { updatedAt: _updatedAt, ...draft } = form;
   return draft;
+}
+
+type TextKey = Exclude<keyof VisitPrep, "visitDate" | "updatedAt">;
+
+const SECTIONS: { id: string; title: string; keys: TextKey[] }[] = [
+  { id: "visit-basics", title: "Основная информация", keys: ["priority", "changes", "episodes"] },
+  { id: "visit-treatment", title: "Состояние и лечение", keys: ["sleep", "moodActivity", "currentMedication", "previousMedication", "substances", "health"] },
+  { id: "visit-context", title: "Контекст и безопасность", keys: ["familyHistory", "safety", "other", "questions"] },
+];
+
+const TOTAL_FIELDS = SECTIONS.reduce((sum, section) => sum + section.keys.length, 0);
+
+function filledCount(form: VisitPrep, keys: TextKey[]): number {
+  return keys.filter((key) => form[key].trim().length > 0).length;
+}
+
+/** «сегодня», «завтра», «через 5 дней» — по календарным дням, без учёта времени суток. */
+function describeVisitDate(value: string, now: Date): string | null {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const days = Math.round((Date.UTC(year, month - 1, day) - today) / 86_400_000);
+  if (days === 0) return "Приём сегодня";
+  if (days === 1) return "Приём завтра";
+  if (days > 1) return `Приём через ${days} ${plural(days, ["день", "дня", "дней"])}`;
+  return "Дата приёма уже прошла";
 }
 
 const emptyForm: VisitPrep = {
@@ -60,8 +89,11 @@ export function VisitPrepView() {
   const [hasSaved, setHasSaved] = useState(false);
   const draftEditedRef = useRef(false);
   const editedFieldsRef = useRef(new Set<keyof VisitPrep>());
+  const [confirm, confirmDialog] = useConfirm();
 
   const isDirty = JSON.stringify(form) !== savedSnapshot;
+  const filledTotal = SECTIONS.reduce((sum, section) => sum + filledCount(form, section.keys), 0);
+  const visitWhen = hydrated && form.visitDate ? describeVisitDate(form.visitDate, new Date()) : null;
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -146,8 +178,16 @@ export function VisitPrepView() {
     if (crisis.shouldOpenDialog) setCrisisOpen(true);
   }
 
-  function discardDraft() {
-    if (!window.confirm("Удалить незаписанный черновик? Сохранённая сводка останется.")) return;
+  async function discardDraft() {
+    const accepted = await confirm({
+      title: "Удалить черновик?",
+      description: hasSaved
+        ? "Несохранённые изменения будут удалены, форма вернётся к сохранённой сводке."
+        : "Введённый текст будет удалён из этого браузера.",
+      confirmLabel: "Удалить черновик",
+      destructive: true,
+    });
+    if (!accepted) return;
     try {
       clearVisitPrepDraft();
       draftEditedRef.current = false;
@@ -160,8 +200,14 @@ export function VisitPrepView() {
     }
   }
 
-  function deleteSavedSummary() {
-    if (!window.confirm("Удалить сохранённую сводку и её черновик?")) return;
+  async function deleteSavedSummary() {
+    const accepted = await confirm({
+      title: "Удалить сводку?",
+      description: "Сохранённая сводка и её черновик будут удалены из этого браузера. Записи дневника останутся.",
+      confirmLabel: "Удалить сводку",
+      destructive: true,
+    });
+    if (!accepted) return;
     try {
       clearVisitPrep();
       clearVisitPrepDraft();
@@ -192,24 +238,54 @@ export function VisitPrepView() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">
-      <header className="flex items-start gap-3">
-        <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
-          <ClipboardPenLine aria-hidden="true" className="h-6 w-6" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Подготовка к приёму</h1>
-          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Структурируйте то, что важно рассказать новому психиатру, и возьмите сводку с собой.
+      <PageHeader
+        eyebrow="К врачу"
+        title="Подготовка к приёму"
+        description={
+          <>
+            <p>Структурируйте то, что важно рассказать новому психиатру, и возьмите сводку с собой.</p>
+            <p className="mt-2 text-sm">
+              Заполнять всё необязательно. Можно пропускать вопросы, на которые трудно отвечать или которыми вы пока не готовы делиться. Это рабочая заметка для разговора, не диагноз и не замена анкете специалиста.
+            </p>
+            <p className="mt-2 text-sm">
+              Черновик формы сохраняется в этом браузере. Дневник не добавляется в файл автоматически: выберите эту опцию только если хотите включить последние наблюдения.
+            </p>
+          </>
+        }
+      />
+
+      <nav aria-label="Разделы сводки" className="no-print rounded-2xl border border-border/80 bg-card p-4 shadow-card">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-sm">
+          <p className="font-medium">
+            Заполнено <span className="tabular-nums">{filledTotal}</span> из{" "}
+            <span className="tabular-nums">{TOTAL_FIELDS}</span> {plural(TOTAL_FIELDS, ["пункта", "пунктов", "пунктов"])}
           </p>
+          <p className="text-xs text-muted-foreground">{visitWhen ?? "Дату приёма можно указать ниже"}</p>
         </div>
-      </header>
+        <div aria-hidden="true" className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
+          <div
+            className="h-full rounded-full bg-primary transition-[width] motion-reduce:transition-none"
+            style={{ width: `${(filledTotal / TOTAL_FIELDS) * 100}%` }}
+          />
+        </div>
+        <ul className="mt-3 flex flex-wrap gap-2">
+          {SECTIONS.map((section) => (
+            <li key={section.id}>
+              <a
+                href={`#${section.id}`}
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-surface px-3.5 text-sm transition-colors hover:border-primary/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+              >
+                {section.title}
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {filledCount(form, section.keys)}/{section.keys.length}
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm leading-relaxed text-muted-foreground">
-        <p>Заполнять всё необязательно. Можно пропускать вопросы, на которые трудно отвечать или которыми вы пока не готовы делиться. Это рабочая заметка для разговора, не диагноз и не замена анкете специалиста.</p>
-        <p className="mt-2">Черновик формы сохраняется в этом браузере. Дневник не добавляется в файл автоматически: выберите эту опцию только если хотите включить последние наблюдения.</p>
-      </div>
-
-      <Card>
+      <Card id="visit-basics" className="scroll-mt-24">
         <CardHeader><CardTitle as="h2" className="text-lg">Основная информация</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <p role="status" aria-live="polite" className="text-xs text-muted-foreground">
@@ -225,7 +301,7 @@ export function VisitPrepView() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="visit-treatment" className="scroll-mt-24">
         <CardHeader><CardTitle as="h2" className="text-lg">Состояние и лечение</CardTitle></CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <TextField label="Сон" value={form.sleep} onChange={(value) => update("sleep", value)} placeholder="Время сна и подъёма, пробуждения, изменения потребности во сне" />
@@ -237,7 +313,7 @@ export function VisitPrepView() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="visit-context" className="scroll-mt-24">
         <CardHeader><CardTitle as="h2" className="text-lg">Контекст и безопасность</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <TextField label="Семейный анамнез" value={form.familyHistory} onChange={(value) => update("familyHistory", value)} rows={4} placeholder="Известные психические расстройства, зависимости, суициды или необычные периоды у близких — если это известно" />
@@ -255,20 +331,20 @@ export function VisitPrepView() {
         </span>
       </label>
 
-      <div className="no-print sticky bottom-24 z-20 -mx-2 flex flex-wrap items-center gap-2 rounded-2xl border border-border/70 bg-background/85 p-2 backdrop-blur lg:bottom-4">
+      <div className="no-print action-dock sticky z-20 -mx-2 flex flex-wrap items-center gap-2 rounded-2xl border border-border/70 bg-background/90 p-2 shadow-raised backdrop-blur">
         <Button onClick={save} variant={isDirty ? "default" : "outline"}>
           <Save aria-hidden="true" className="h-4 w-4" /> Сохранить
         </Button>
         {draftStatus !== "empty" && draftStatus !== "loading" ? (
-          <Button variant="ghost" onClick={discardDraft}>
-            <Trash2 aria-hidden="true" className="h-4 w-4" /> Удалить черновик
+          <Button variant="ghost" className="min-w-11" title="Удалить черновик" onClick={discardDraft}>
+            <Trash2 aria-hidden="true" className="h-4 w-4" /> <span className="sr-only sm:not-sr-only">Удалить черновик</span>
           </Button>
         ) : null}
-        <Button variant="ghost" size="sm" onClick={download}>
-          <Download aria-hidden="true" className="h-4 w-4" /> Скачать сводку
+        <Button variant="ghost" className="min-w-11" title="Скачать сводку" onClick={download}>
+          <Download aria-hidden="true" className="h-4 w-4" /> <span className="sr-only sm:not-sr-only">Скачать сводку</span>
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => window.print()}>
-          <Printer aria-hidden="true" className="h-4 w-4" /> Печать
+        <Button variant="ghost" className="min-w-11" title="Печать" onClick={() => window.print()}>
+          <Printer aria-hidden="true" className="h-4 w-4" /> <span className="sr-only sm:not-sr-only">Печать</span>
         </Button>
         <span aria-hidden="true" className="ml-auto hidden text-xs text-muted-foreground sm:block">
           {isDirty ? "Есть несохранённые изменения" : DRAFT_STATUS_TEXT[draftStatus]}
@@ -281,13 +357,14 @@ export function VisitPrepView() {
           <Button
             variant="ghost"
             size="sm"
-            className="min-h-9 px-2 text-xs text-muted-foreground underline underline-offset-4 hover:text-destructive"
+            className="min-h-11 px-2 text-xs text-muted-foreground underline underline-offset-4 hover:text-destructive"
             onClick={deleteSavedSummary}
           >
             Удалить сводку
           </Button>
         ) : null}
       </div>
+      {confirmDialog}
     </div>
   );
 }
